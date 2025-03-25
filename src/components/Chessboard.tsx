@@ -1,17 +1,11 @@
 //import React from 'react';
 import { Coordinate, TileColor } from './CommonTypes'
+import ChessTile, { ChessTileInterface } from "./ChessTile"
 import "./Chessboard.css";
 
-interface ChessTile {
-    x: number,
-    y: number,
-    size: number,
-    color: TileColor;
-    getCenter(): Coordinate
-};
 
 interface TileGrid {
-    [key: string]: ChessTile
+    [key: string]: ChessTileInterface
 };
 
 type Col = "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H";
@@ -34,7 +28,7 @@ function getTileKey(row: number, col: number): string {
 
 const chessboard: TileGrid = {}
 const BOARDSIZE = 8;
-const TILESIZE = 32;
+const TILESIZE = 128;
 
 function buildChessboard() {
     
@@ -64,15 +58,16 @@ function buildChessboard() {
             }
 
             const tileKey = getTileKey(row, col);
-            const chessTile: ChessTile = {
+            const chessTile: ChessTileInterface = {
+                id: tileKey,
                 x: col,
                 y: row,
                 size: TILESIZE,
                 color: tileColor,
                 getCenter(): Coordinate {
                     const coord: Coordinate = {
-                        x: (this.x * TILESIZE) / 2,
-                        y: (this.y * TILESIZE) / 2,
+                        x: ((this.x - 1) * TILESIZE) / 2,
+                        y: ((this.y - 1) * TILESIZE) / 2,
                     };
                     return coord;
                 }
@@ -86,11 +81,40 @@ function buildChessboard() {
 buildChessboard();
 console.log(chessboard);
 
+/*
+interface Props {
+    id: string,
+    key: string;
+    x: number,
+    y: number,
+    size: number,
+    color: TileColor,
+    getCenter(): Coordinate,
+};
+*/
+
 function Chessboard() {
 
+    const tileKeys = Object.keys(chessboard)
+
+    const tiles = tileKeys.map((tile) => (
+        <ChessTile 
+            id={chessboard[tile].id}
+            key={chessboard[tile].id}
+            x={chessboard[tile].x}
+            y={chessboard[tile].y}
+            size={chessboard[tile].size}
+            color={chessboard[tile].color}
+            getCenter={chessboard[tile].getCenter} />
+    ));
+
+    const SIZECALC = `${TILESIZE * BOARDSIZE}px`;
+
     return (
-        <div className="size-32 flex justify-center w-full">
-            <p className="w-full">Hello, world!</p>
+        <div 
+            className="flex justify-center"
+            style={{ width: SIZECALC, height: SIZECALC }}>
+            {tiles}
         </div>
     );
 };

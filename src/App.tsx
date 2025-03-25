@@ -1,4 +1,5 @@
 import Chessboard from "./components/Chessboard"
+import "./App.css"
 
 function App() {
 
