@@ -1,4 +1,4 @@
-//import React from 'react';
+import React, { useContext, useState } from 'react';
 import { Coordinate, TileColor } from './CommonTypes'
 import ChessTile, { ChessTileInterface } from "./ChessTile"
 import "./Chessboard.css";
@@ -93,9 +93,43 @@ interface Props {
 };
 */
 
+const SIZECALC = `${TILESIZE * BOARDSIZE}px`;
+
 function Chessboard() {
 
     const tileKeys = Object.keys(chessboard)
+    const [highlightedTile, setHighlightedTile] = useState("A1");
+    const [processingKeypress, setProcessingKeypress] = useState(false);
+    
+    function moveTile(xMovement: number, yMovement: number) {
+        if (!processingKeypress) {
+            setProcessingKeypress(true);
+            const tileLetter = highlightedTile[0];
+            const x = translationKey.indexOf(tileLetter as Col) + 1;
+            const y = parseInt(highlightedTile[1]);
+        
+            //console.log(`tileLetter is ${tileLetter} ${x}/${y}`);
+
+            // Horizontal clamping
+            if ((x - xMovement < 0) || (x + xMovement > BOARDSIZE - 1)) {
+                //console.log("Hit horizontal boundary.");
+                return;
+            } 
+        
+            // Vertical clamping
+            if ((y - yMovement < 0) || (y + yMovement > BOARDSIZE - 1)) {
+                //console.log("Hit vertical boundary.")
+                return;
+            }
+
+            const newTile = getTileKey(y + yMovement, x + xMovement);
+
+            console.log(`Trying to move to ${newTile}`)
+
+            setHighlightedTile(newTile);
+            setProcessingKeypress(false);
+        }
+    };
 
     const tiles = tileKeys.map((tile) => (
         <ChessTile 
@@ -104,11 +138,10 @@ function Chessboard() {
             x={chessboard[tile].x}
             y={chessboard[tile].y}
             size={chessboard[tile].size}
-            color={chessboard[tile].color}
+            color={chessboard[tile].id === highlightedTile ? "lightgreen" : chessboard[tile].color}
+            border={chessboard[tile].color}
             getCenter={chessboard[tile].getCenter} />
     ));
-
-    const SIZECALC = `${TILESIZE * BOARDSIZE}px`;
 
     return (
         <div 

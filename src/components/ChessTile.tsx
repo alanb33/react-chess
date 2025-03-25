@@ -19,11 +19,11 @@ interface Props {
     y: number,
     size: number,
     color: TileColor,
+    border: TileColor,
     getCenter(): Coordinate,
 };
 
 function ChessTile(props: Props) {
-    const [color, setColor] = useState(props.color);
     const xPx: string = `${(props.x * props.size)}px`;
     const yPx: string = `${(props.y * props.size)}px`;
 
@@ -34,9 +34,11 @@ function ChessTile(props: Props) {
                 style={{ 
                     left: xPx, 
                     top: yPx, 
-                    backgroundColor: color,
+                    backgroundColor: props.color,
                     height: props.size + "px",
-                    width: props.size + "px"}}
+                    width: props.size + "px",
+                    border: `8px solid ${props.border}`
+                }}
                 id={props.id}
                 key={props.key}>
             </div>
