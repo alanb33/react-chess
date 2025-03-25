@@ -1,16 +1,11 @@
-import React from 'react';
+//import React from 'react';
+import { Coordinate, TileColor } from './CommonTypes'
 import "./Chessboard.css";
-
-type TileColor = "black" | "white";
-
-interface Coordinate {
-    x: number,
-    y: number
-};
 
 interface ChessTile {
     x: number,
     y: number,
+    size: number,
     color: TileColor;
     getCenter(): Coordinate
 };
@@ -55,7 +50,7 @@ function buildChessboard() {
             */
 
             // Alternate tile colors by row evenness
-            const tileColor: TileColor = "white";
+            let tileColor: TileColor = "white";
             if (row % 2 === 1) {
                 // Odd row; odd tiles are white, even are black
                 if (col % 2 === 0) {
@@ -72,6 +67,7 @@ function buildChessboard() {
             const chessTile: ChessTile = {
                 x: col,
                 y: row,
+                size: TILESIZE,
                 color: tileColor,
                 getCenter(): Coordinate {
                     const coord: Coordinate = {
@@ -82,14 +78,13 @@ function buildChessboard() {
                 }
             };
 
-            console.log(chessTile.getCenter());
-
             chessboard[tileKey] = chessTile;
         }
     }
 }
 
 buildChessboard();
+console.log(chessboard);
 
 function Chessboard() {
 
