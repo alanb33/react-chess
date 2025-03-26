@@ -1,4 +1,4 @@
-import React, { useContext, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Coordinate, TileColor } from './CommonTypes'
 import ChessTile, { ChessTileInterface } from "./ChessTile"
 import "./Chessboard.css";
@@ -97,40 +97,10 @@ const SIZECALC = `${TILESIZE * BOARDSIZE}px`;
 
 function Chessboard() {
 
-    const tileKeys = Object.keys(chessboard)
     const [highlightedTile, setHighlightedTile] = useState("A1");
-    const [processingKeypress, setProcessingKeypress] = useState(false);
-    
-    function moveTile(xMovement: number, yMovement: number) {
-        if (!processingKeypress) {
-            setProcessingKeypress(true);
-            const tileLetter = highlightedTile[0];
-            const x = translationKey.indexOf(tileLetter as Col) + 1;
-            const y = parseInt(highlightedTile[1]);
-        
-            //console.log(`tileLetter is ${tileLetter} ${x}/${y}`);
+    const [shiftHeld, setShiftHeld] = useState(false);
 
-            // Horizontal clamping
-            if ((x - xMovement < 0) || (x + xMovement > BOARDSIZE - 1)) {
-                //console.log("Hit horizontal boundary.");
-                return;
-            } 
-        
-            // Vertical clamping
-            if ((y - yMovement < 0) || (y + yMovement > BOARDSIZE - 1)) {
-                //console.log("Hit vertical boundary.")
-                return;
-            }
-
-            const newTile = getTileKey(y + yMovement, x + xMovement);
-
-            console.log(`Trying to move to ${newTile}`)
-
-            setHighlightedTile(newTile);
-            setProcessingKeypress(false);
-        }
-    };
-
+    const tileKeys = Object.keys(chessboard)
     const tiles = tileKeys.map((tile) => (
         <ChessTile 
             id={chessboard[tile].id}
@@ -142,6 +112,80 @@ function Chessboard() {
             border={chessboard[tile].color}
             getCenter={chessboard[tile].getCenter} />
     ));
+
+    useEffect(() => {
+        function moveTile(xMovement: number, yMovement: number) {
+            const tileLetter = highlightedTile[0];
+            const x = translationKey.indexOf(tileLetter as Col) + 1;
+            const y = parseInt(highlightedTile[1]);
+        
+            let destX = x + xMovement;
+            let destY = y + yMovement;
+
+            console.log(`Current X/Y before movement is ${x}/${y}`);
+            // Horizontal clamping
+            if (destX < 1 || destX > BOARDSIZE) {
+                destX = destX < 1 ? 1 : BOARDSIZE;
+                console.log("Hit horizontal limit.");
+            }
+        
+            // Vertical clamping
+            if (destY < 1 || destY > BOARDSIZE) {
+                destY = destY < 1 ? 1 : BOARDSIZE;
+                console.log("Hit vertical limit.");
+            }
+    
+            const newTile = getTileKey(destY, destX);
+
+            if (newTile !== highlightedTile) {
+                setHighlightedTile(newTile);
+                console.log(`Trying to move to ${newTile}`)
+            } else {
+                console.log("No movement possible.");
+            }
+        };
+    
+        function handleKeyDown(event: KeyboardEvent) {
+            const distance = shiftHeld ? BOARDSIZE : 1;
+            switch (event.key) {
+                case "Shift":
+                    if (!shiftHeld) {
+                        console.log("Holding shift");
+                        setShiftHeld(true);
+                    }
+                    break;
+                case "ArrowUp":
+                    moveTile(0, -distance);
+                    break;
+                case "ArrowDown":
+                    moveTile(0, distance);
+                    break;
+                case "ArrowLeft":
+                    moveTile(-distance, 0);
+                    break;
+                case "ArrowRight":
+                    moveTile(distance, 0);
+                    break;
+            };
+        };
+
+        function handleKeyUp(event: KeyboardEvent) {
+            if (event.key === "Shift") {
+                console.log("Releasing shift");
+                setShiftHeld(false);
+            };
+        };
+
+        document.addEventListener("keydown", handleKeyDown);
+        document.addEventListener("keyup", handleKeyUp);
+
+        // Cleanup function, so it doesn't add the event listener repeatedly
+        return () => {
+            document.removeEventListener("keydown", handleKeyDown);
+            document.removeEventListener("keyup", handleKeyUp);
+        };
+
+    }, [highlightedTile, shiftHeld]);
 
     return (
         <div 

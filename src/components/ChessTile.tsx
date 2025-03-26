@@ -14,7 +14,6 @@ interface ChessTileInterface {
 
 interface Props {
     id: string,
-    key: string;
     x: number,
     y: number,
     size: number,
@@ -40,7 +39,7 @@ function ChessTile(props: Props) {
                     border: `8px solid ${props.border}`
                 }}
                 id={props.id}
-                key={props.key}>
+                key={props.id}>
             </div>
         </>
     )
