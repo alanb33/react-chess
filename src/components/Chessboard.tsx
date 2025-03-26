@@ -192,12 +192,11 @@ function Chessboard(props: SizeProps) {
             }
         }
 
-
         document.addEventListener("keydown", handleKeyDown);
         document.addEventListener("keyup", handleKeyUp);
         document.addEventListener("mousedown", handleClick);
 
-        // Cleanup function, so it doesn't add the event listener repeatedly
+        // Cleanup function, so it doesn't add the event listeners repeatedly
         return () => {
             document.removeEventListener("keydown", handleKeyDown);
             document.removeEventListener("keyup", handleKeyUp);
