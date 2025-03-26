@@ -1,8 +1,14 @@
-type TileColor = "black" | "white" | "lightgreen" | "lightred";
+// Used to determine tile colors.
+export type TileColor = "black" | "white" | "lightgreen" | "lightred";
 
-interface Coordinate {
+// Used in some cases of x/y coordinate usage with tiles.
+export interface Coordinate {
     x: number,
     y: number
 };
 
-export type { Coordinate, TileColor };
+// Used to pass size information.
+export interface SizeProps {
+    "boardSize": number;
+    "tileSize": number;
+};

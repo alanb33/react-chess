@@ -1,5 +1,3 @@
-import React, { useState } from 'react';
-
 import { Coordinate, TileColor } from "./CommonTypes";
 import "./ChessTile.css";
 
@@ -36,7 +34,7 @@ function ChessTile(props: Props) {
                     backgroundColor: props.color,
                     height: props.size + "px",
                     width: props.size + "px",
-                    border: `${props.size / 4}px solid ${props.border}`
+                    border: `${props.size / 8}px solid ${props.border}`
                 }}
                 id={props.id}
                 key={props.id}>

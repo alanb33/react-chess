@@ -1,19 +1,19 @@
-import { createContext } from "react";
-
 import Chessboard from "./components/Chessboard"
 import "./App.css"
 
-const highlightedTileKey = createContext("A1");
+const BOARDSIZE = 8;
+const TILESIZE = 128;
 
 function App() {
 
   return (
     <>
-      <highlightedTileKey.Provider value={"A1"}>
-        <Chessboard />
-      </highlightedTileKey.Provider>
+        <Chessboard 
+          boardSize={BOARDSIZE}
+          tileSize={TILESIZE}
+          />
     </>
-  )
+  );
 }
 
 export default App

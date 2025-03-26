@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
-import { Coordinate, TileColor } from './CommonTypes'
-import ChessTile, { ChessTileInterface } from "./ChessTile"
-import "./Chessboard.css";
+import { useEffect, useState } from 'react';
 
+import ChessTile, { ChessTileInterface } from "./ChessTile"
+import { Coordinate, SizeProps, TileColor } from "./CommonTypes";
+
+import "./Chessboard.css";
 
 interface TileGrid {
     [key: string]: ChessTileInterface
@@ -26,79 +27,67 @@ function getTileKey(row: number, col: number): string {
     return `${colLetter}${row}`;
 };
 
-const chessboard: TileGrid = {}
-const BOARDSIZE = 8;
-const TILESIZE = 128;
+function Chessboard(props: SizeProps) {
 
-function buildChessboard() {
-    
-    for (let row = BOARDSIZE; row >= 1; row-- ) {
-        for (let col = 1; col <= BOARDSIZE; col++ ) {
-            /*
-                Tiles are represents as letter-number, where a letter is a
-                reference to the column, and the number is the row that the
-                tile is in. For example, the first column is A and the last
-                column is H. Importantly, numbering starts from the bottom to
-                the top, rather than top to bottom, so to instantiate the 
-                board, I must begin at BOARDSIZE.
-            */
-
-            // Alternate tile colors by row evenness
-            let tileColor: TileColor = "white";
-            if (row % 2 === 1) {
-                // Odd row; odd tiles are white, even are black
-                if (col % 2 === 0) {
-                    tileColor = "black";
-                }
-            } else {
-                // Even row; odd tiles are black, even are white
-                if (col % 2 === 1) {
-                    tileColor = "black";
-                }
-            }
-
-            const tileKey = getTileKey(row, col);
-            const chessTile: ChessTileInterface = {
-                id: tileKey,
-                x: col,
-                y: row,
-                size: TILESIZE,
-                color: tileColor,
-                getCenter(): Coordinate {
-                    const coord: Coordinate = {
-                        x: ((this.x - 1) * TILESIZE) / 2,
-                        y: ((this.y - 1) * TILESIZE) / 2,
-                    };
-                    return coord;
-                }
-            };
-
-            chessboard[tileKey] = chessTile;
-        }
-    }
-}
-
-buildChessboard();
-console.log(chessboard);
-
-/*
-interface Props {
-    id: string,
-    key: string;
-    x: number,
-    y: number,
-    size: number,
-    color: TileColor,
-    getCenter(): Coordinate,
-};
-*/
-
-const SIZECALC = `${TILESIZE * BOARDSIZE}px`;
-
-function Chessboard() {
-
+    const [chessboard, setChessboard] = useState<TileGrid>({})
     const [highlightedTile, setHighlightedTile] = useState("A1");
     const [shiftHeld, setShiftHeld] = useState(false);
+
+    function buildChessboard(): TileGrid {
+        
+        const newChessboard: TileGrid = {};
+
+        for (let row = props.boardSize; row >= 1; row-- ) {
+            for (let col = 1; col <= props.boardSize; col++ ) {
+                /*
+                    Tiles are represents as letter-number, where a letter is a
+                    reference to the column, and the number is the row that the
+                    tile is in. For example, the first column is A and the last
+                    column is H. Importantly, numbering starts from the bottom to
+                    the top, rather than top to bottom, so to instantiate the 
+                    board, I must begin at props.boardSize.
+                */
+    
+                // Alternate tile colors by row evenness
+                let tileColor: TileColor = "white";
+                if (row % 2 === 1) {
+                    // Odd row; odd tiles are white, even are black
+                    if (col % 2 === 0) {
+                        tileColor = "black";
+                    }
+                } else {
+                    // Even row; odd tiles are black, even are white
+                    if (col % 2 === 1) {
+                        tileColor = "black";
+                    }
+                }
+    
+                const tileKey = getTileKey(row, col);
+                const chessTile: ChessTileInterface = {
+                    id: tileKey,
+                    x: col,
+                    y: row,
+                    size: props.tileSize,
+                    color: tileColor,
+                    getCenter(): Coordinate {
+                        const coord: Coordinate = {
+                            x: ((this.x - 1) * props.tileSize) / 2,
+                            y: ((this.y - 1) * props.tileSize) / 2,
+                        };
+                        return coord;
+                    }
+                };
+    
+                newChessboard[tileKey] = chessTile;
+            };
+        };
+
+        return newChessboard;
+    }
+
+    if (Object.keys(chessboard).length === 0) {
+        setChessboard(buildChessboard());
+    }
 
     const tileKeys = Object.keys(chessboard)
     const tiles = tileKeys.map((tile) => (
@@ -124,14 +113,14 @@ function Chessboard() {
 
             console.log(`Current X/Y before movement is ${x}/${y}`);
             // Horizontal clamping
-            if (destX < 1 || destX > BOARDSIZE) {
-                destX = destX < 1 ? 1 : BOARDSIZE;
+            if (destX < 1 || destX > props.boardSize) {
+                destX = destX < 1 ? 1 : props.boardSize;
                 console.log("Hit horizontal limit.");
             }
         
             // Vertical clamping
-            if (destY < 1 || destY > BOARDSIZE) {
-                destY = destY < 1 ? 1 : BOARDSIZE;
+            if (destY < 1 || destY > props.boardSize) {
+                destY = destY < 1 ? 1 : props.boardSize;
                 console.log("Hit vertical limit.");
             }
     
@@ -146,7 +135,7 @@ function Chessboard() {
         };
     
         function handleKeyDown(event: KeyboardEvent) {
-            const distance = shiftHeld ? BOARDSIZE : 1;
+            const distance = shiftHeld ? props.boardSize : 1;
             switch (event.key) {
                 case "Shift":
                     if (!shiftHeld) {
@@ -185,7 +174,9 @@ function Chessboard() {
             document.removeEventListener("keyup", handleKeyUp);
         };
 
-    }, [highlightedTile, shiftHeld]);
+    }, [highlightedTile, shiftHeld, props]);
+
+    const SIZECALC = `${props.tileSize * props.boardSize}px`;
 
     return (
         <div 
