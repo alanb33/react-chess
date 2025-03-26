@@ -36,7 +36,7 @@ function ChessTile(props: Props) {
                     backgroundColor: props.color,
                     height: props.size + "px",
                     width: props.size + "px",
-                    border: `8px solid ${props.border}`
+                    border: `${props.size / 4}px solid ${props.border}`
                 }}
                 id={props.id}
                 key={props.id}>
