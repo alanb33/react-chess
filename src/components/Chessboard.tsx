@@ -184,10 +184,10 @@ function Chessboard(props: SizeProps) {
         };
 
         function handleClick(event: MouseEvent) {
-            const targetElementID = event.target?.id;
-            if (targetElementID) {
-                if (isTileKey(targetElementID)) {
-                    setHighlightedTile(targetElementID);
+            const target = event.target as Element;
+            if (target) {
+                if (isTileKey(target.id)) {
+                    setHighlightedTile(target.id);
                 }
             }
         }
