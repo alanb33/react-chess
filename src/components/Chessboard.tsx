@@ -22,6 +22,24 @@ const translationKey: Array<Col> = [
     "H"
 ];
 
+function isTileKey(key: string) {
+    if (key.length === 2) {
+        const letter = key[0].toLowerCase();
+        if (letter >= "a" && letter <= "h") {
+            const number = parseInt(key[1]);
+            if (number) {
+                if (number >= 1 && number <= 8) {
+                    return true;
+                }
+                return false;
+            }
+            return false;
+        }
+        return false;
+    }
+    return false;
+}
+
 function getTileKey(row: number, col: number): string {
     const colLetter: Col = translationKey[col - 1];
     return `${colLetter}${row}`;
@@ -165,13 +183,25 @@ function Chessboard(props: SizeProps) {
             };
         };
 
+        function handleClick(event: MouseEvent) {
+            const targetElementID = event.target?.id;
+            if (targetElementID) {
+                if (isTileKey(targetElementID)) {
+                    setHighlightedTile(targetElementID);
+                }
+            }
+        }
+
+
         document.addEventListener("keydown", handleKeyDown);
         document.addEventListener("keyup", handleKeyUp);
+        document.addEventListener("mousedown", handleClick);
 
         // Cleanup function, so it doesn't add the event listener repeatedly
         return () => {
             document.removeEventListener("keydown", handleKeyDown);
             document.removeEventListener("keyup", handleKeyUp);
+            document.removeEventListener("mousedown", handleClick);
         };
 
     }, [highlightedTile, shiftHeld, props]);
