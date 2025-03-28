@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 
+import ChessPiece, { ChessPieceProps } from "./ChessPiece";
 import ChessTile, { ChessTileInterface } from "./ChessTile"
 import { Coordinate, SizeProps, TileColor } from "./CommonTypes";
 
 import "./Chessboard.css";
 
 interface TileGrid {
-    [key: string]: ChessTileInterface
+    [key: string]: ChessTileInterface;
 };
 
 type Col = "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H";
@@ -47,9 +48,15 @@ function getTileKey(row: number, col: number): string {
 
 function Chessboard(props: SizeProps) {
 
-    const [chessboard, setChessboard] = useState<TileGrid>({})
+    const [chessboard, setChessboard] = useState<TileGrid>({});
+    const [chessPieces, setChessPieces] = useState<Array<ChessPieceProps>>([]);
     const [highlightedTile, setHighlightedTile] = useState("A1");
     const [shiftHeld, setShiftHeld] = useState(false);
+
+    function getTile(tileKey: string): ChessTileInterface | null {
+        const lowerTile = tileKey.toLowerCase();
+        return isTileKey(lowerTile) ? chessboard[lowerTile] : null;
+    }
 
     function buildChessboard(): TileGrid {
         
@@ -103,8 +110,43 @@ function Chessboard(props: SizeProps) {
         return newChessboard;
     }
 
+    function placeInitialPieces(): Array<ChessPieceProps> {
+
+        const setPieces = [];
+
+        interface PieceData {
+            piece: string,
+            color: string,
+            initialTile: string,
+        };
+
+        const pieces: PieceData[] = [
+            {piece: "pawn",  color: "black", initialTile: "A7"},
+            {piece: "pawn",  color: "black", initialTile: "B7"},
+        ];
+
+        for (const piece in pieces) {
+            const data = pieces[piece];
+            const tile = getTile(data.initialTile);
+            console.log(`Tile is ${tile}. ${tile?.x} ${tile?.y}`);
+            setPieces.push(
+                {
+                    imagePath: `src/assets/images/${data.piece}-${data.color[0]}.png`,
+                    size: props.tileSize,
+                    x: tile ? tile.x : 0,
+                    y: tile ? tile.y : 0,
+                    id: `${data.piece}-${data.initialTile}`,
+                }
+            )
+        }
+
+        return setPieces;
+
+    };
+
     if (Object.keys(chessboard).length === 0) {
         setChessboard(buildChessboard());
+        setChessPieces(placeInitialPieces());
     }
 
     const tileKeys = Object.keys(chessboard)
@@ -118,6 +160,16 @@ function Chessboard(props: SizeProps) {
             color={chessboard[tile].id === highlightedTile ? "lightgreen" : chessboard[tile].color}
             border={chessboard[tile].color}
             getCenter={chessboard[tile].getCenter} />
+    ));
+
+    const pieces = chessPieces.map((piece) => (
+        <ChessPiece
+            id={piece.id}
+            key={piece.id}
+            x={piece.x}
+            y={piece.y}
+            size={piece.size}
+            imagePath={piece.imagePath} />
     ));
 
     useEffect(() => {
@@ -212,6 +264,7 @@ function Chessboard(props: SizeProps) {
             className="flex justify-center"
             style={{ width: SIZECALC, height: SIZECALC }}>
             {tiles}
+            {pieces}
         </div>
     );
 };
