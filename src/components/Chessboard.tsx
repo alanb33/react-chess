@@ -10,6 +10,10 @@ interface TileGrid {
     [key: string]: ChessTileInterface;
 };
 
+interface PieceDict {
+    [key: string]: ChessPieceProps;
+}
+
 type Col = "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H";
 
 const translationKey: Array<Col> = [
@@ -49,13 +53,80 @@ function getTileKey(row: number, col: number): string {
 function Chessboard(props: SizeProps) {
 
     const [chessboard, setChessboard] = useState<TileGrid>({});
-    const [chessPieces, setChessPieces] = useState<Array<ChessPieceProps>>([]);
+    const [pieces, setPieces] = useState<PieceDict>({});
     const [highlightedTile, setHighlightedTile] = useState("A1");
     const [shiftHeld, setShiftHeld] = useState(false);
 
-    function getTile(tileKey: string): ChessTileInterface | null {
-        const lowerTile = tileKey.toLowerCase();
-        return isTileKey(lowerTile) ? chessboard[lowerTile] : null;
+    let tempChessboard: TileGrid = {};
+
+    function placePieces(): PieceDict {
+
+        const newPieces: PieceDict = {};
+
+        const initialPieces = []
+
+        for (let i = 0; i < props.boardSize; i++) {
+            const columnPieces = []
+            const columnLetter = translationKey[i];
+
+            const pawn_white = {name: "pawn", color: "white", tile: `${columnLetter}2`};
+            const pawn_black = {name: "pawn", color: "black", tile: `${columnLetter}7`};
+            columnPieces.push(pawn_white, pawn_black);
+
+            switch (columnLetter) {
+                case "A":
+                case "H": {
+                    const rook_white = {name: "rook", color: "white", tile: `${columnLetter}1`};
+                    const rook_black = {name: "rook", color: "black", tile: `${columnLetter}8`};
+                    columnPieces.push(rook_white, rook_black);
+                    break;
+                }
+                case "B":
+                case "G": {
+                    const knight_white = {name: "knight", color: "white", tile: `${columnLetter}1`};
+                    const knight_black = {name: "knight", color: "black", tile: `${columnLetter}8`};
+                    columnPieces.push(knight_white, knight_black);
+                    break;
+                }
+                case "C":
+                case "F": {
+                    const bishop_white = {name: "bishop", color: "white", tile: `${columnLetter}1`};
+                    const bishop_black = {name: "bishop", color: "black", tile: `${columnLetter}8`};
+                    columnPieces.push(bishop_white, bishop_black);
+                    break;
+                }
+                case "D": {
+                    const queen_white = {name: "queen", color: "white", tile: `${columnLetter}1`};
+                    const queen_black = {name: "queen", color: "black", tile: `${columnLetter}8`};
+                    columnPieces.push(queen_white, queen_black);
+                    break;
+                }
+                case "E": {
+                    const king_white = {name: "king", color: "white", tile: `${columnLetter}1`};
+                    const king_black = {name: "king", color: "black", tile: `${columnLetter}8`};
+                    columnPieces.push(king_white, king_black);
+                    break;
+                }
+            }
+
+            initialPieces.push(...columnPieces);
+        };
+
+        for (const piece of initialPieces) {
+            const tile = tempChessboard[piece.tile];
+            const key = `${piece.name}-${piece.color[0]}-${piece.tile}`;
+            const newPiece: ChessPieceProps = {
+                id: key,
+                x: tile.x,
+                y: tile.y,
+                size: tile.size,
+                imagePath: `src/assets/images/${piece.name}-${piece.color[0]}.png`
+            };
+            newPieces[newPiece.id] = newPiece;
+        }
+
+        return newPieces;
+
     }
 
     function buildChessboard(): TileGrid {
@@ -110,43 +181,10 @@ function Chessboard(props: SizeProps) {
         return newChessboard;
     }
 
-    function placeInitialPieces(): Array<ChessPieceProps> {
-
-        const setPieces = [];
-
-        interface PieceData {
-            piece: string,
-            color: string,
-            initialTile: string,
-        };
-
-        const pieces: PieceData[] = [
-            {piece: "pawn",  color: "black", initialTile: "A7"},
-            {piece: "pawn",  color: "black", initialTile: "B7"},
-        ];
-
-        for (const piece in pieces) {
-            const data = pieces[piece];
-            const tile = getTile(data.initialTile);
-            console.log(`Tile is ${tile}. ${tile?.x} ${tile?.y}`);
-            setPieces.push(
-                {
-                    imagePath: `src/assets/images/${data.piece}-${data.color[0]}.png`,
-                    size: props.tileSize,
-                    x: tile ? tile.x : 0,
-                    y: tile ? tile.y : 0,
-                    id: `${data.piece}-${data.initialTile}`,
-                }
-            )
-        }
-
-        return setPieces;
-
-    };
-
     if (Object.keys(chessboard).length === 0) {
-        setChessboard(buildChessboard());
-        setChessPieces(placeInitialPieces());
+        tempChessboard = buildChessboard();
+        setChessboard(tempChessboard);
+        setPieces(placePieces());
     }
 
     const tileKeys = Object.keys(chessboard)
@@ -162,14 +200,15 @@ function Chessboard(props: SizeProps) {
             getCenter={chessboard[tile].getCenter} />
     ));
 
-    const pieces = chessPieces.map((piece) => (
-        <ChessPiece
-            id={piece.id}
-            key={piece.id}
-            x={piece.x}
-            y={piece.y}
-            size={piece.size}
-            imagePath={piece.imagePath} />
+    const pieceKeys = Object.keys(pieces)
+    const pieceElements = pieceKeys.map((piece) => (
+        <ChessPiece 
+            id={pieces[piece].id}
+            key={pieces[piece].id}
+            x={pieces[piece].x}
+            y={pieces[piece].y}
+            size={pieces[piece].size}
+            imagePath={pieces[piece].imagePath} />
     ));
 
     useEffect(() => {
@@ -264,7 +303,7 @@ function Chessboard(props: SizeProps) {
             className="flex justify-center"
             style={{ width: SIZECALC, height: SIZECALC }}>
             {tiles}
-            {pieces}
+            {pieceElements}
         </div>
     );
 };

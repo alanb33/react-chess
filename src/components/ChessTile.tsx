@@ -20,9 +20,20 @@ interface Props {
     getCenter(): Coordinate,
 };
 
+const WHITE_COLOR = "cornsilk";
+const BLACK_COLOR = "chocolate";
+
 function ChessTile(props: Props) {
     const xPx: string = `${(props.x * props.size)}px`;
     const yPx: string = `${(props.y * props.size)}px`;
+
+    let color = WHITE_COLOR;
+    if (props.color === "lightgreen") {
+        // We're highlighted.
+        color = "lightgreen";
+    } else if (props.color === "black") {
+        color = BLACK_COLOR;
+    };
 
     return (
         <>
@@ -31,10 +42,10 @@ function ChessTile(props: Props) {
                 style={{ 
                     left: xPx, 
                     top: yPx, 
-                    backgroundColor: props.color,
+                    backgroundColor: color,
                     height: props.size + "px",
                     width: props.size + "px",
-                    border: `${props.size / 8}px solid ${props.border}`
+                    border: `${props.size / 8}px solid ${props.border === "white" ? "cornsilk" : "chocolate"}`
                 }}
                 id={props.id}
                 key={props.id}>
