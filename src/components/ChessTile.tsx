@@ -46,6 +46,7 @@ function ChessTile(props: Props) {
             <>
                 <div
                     className={`absolute`}
+                    chess-tile={"true"}
                     style={{ 
                         left: xPx, 
                         top: yPx, 
@@ -53,7 +54,7 @@ function ChessTile(props: Props) {
                         height: props.size + "px",
                         width: props.size + "px",
                         border: `${props.size / 8}px solid ${props.border === "white" ? WHITE_COLOR : BLACK_COLOR }`,
-                        cursor: props.drawPiece.color === PLAYER_COLOR ? "grab" : "default",
+                        //cursor: props.drawPiece.color === PLAYER_COLOR ? "grab" : "default",
                     }}
                     id={props.id}
                     key={props.id}>
@@ -74,6 +75,7 @@ function ChessTile(props: Props) {
             <>
                 <div
                     className={`absolute`}
+                    chess-tile={"true"}
                     style={{ 
                         left: xPx, 
                         top: yPx, 

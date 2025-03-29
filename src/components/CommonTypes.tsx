@@ -12,3 +12,9 @@ export interface SizeProps {
     "boardSize": number;
     "tileSize": number;
 };
+
+// Used to track state of mouse position
+export interface MousePos {
+    "x": number;
+    "y": number;
+};

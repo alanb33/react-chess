@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 
 import { ChessPieceProps } from "./ChessPiece";
 import ChessTile, { ChessTileInterface } from "./ChessTile"
-import { Coordinate, SizeProps, TileColor } from "./CommonTypes";
+import { Coordinate, MousePos, SizeProps, TileColor } from "./CommonTypes";
 
 import "./Chessboard.css";
 
@@ -26,6 +26,14 @@ const translationKey: Array<Col> = [
     "G",
     "H"
 ];
+
+function isChessPiece(element: EventTarget) {
+    return (element instanceof HTMLImageElement && element.getAttribute("chess-piece"));
+}
+
+function isChessboardTile(element: EventTarget) {
+    return (element instanceof HTMLDivElement && element.getAttribute("chess-tile"));
+}
 
 function isTileKey(key: string) {
     if (key.length === 2) {
@@ -56,6 +64,8 @@ function Chessboard(props: SizeProps) {
     const [pieces, setPieces] = useState<PieceDict>({});
     const [highlightedTile, setHighlightedTile] = useState("A1");
     const [shiftHeld, setShiftHeld] = useState(false);
+    const [draggingPiece, setDraggingPiece] = useState<string | null>(null)
+    const [mousePosition, setMousePosition] = useState<MousePos>({x: 0, y: 0});
 
     let tempChessboard: TileGrid = {};
     let tempPieces: PieceDict = {};
@@ -212,7 +222,7 @@ function Chessboard(props: SizeProps) {
         for (const pieceKey in pieceDict) {
             const piece = pieceDict[pieceKey];
             const pieceTile = getTileKey(piece.y, piece.x);
-            if (tile === pieceTile) {
+            if (tile === pieceTile && piece.id != draggingPiece)  {
                 drawPiece = piece;
                 break;
             }
@@ -233,6 +243,23 @@ function Chessboard(props: SizeProps) {
             />
         )
     });
+
+    let cursorFollower = null;
+    if (draggingPiece) {
+        const piece = pieces[draggingPiece];
+        cursorFollower = (
+            <img
+                src={piece.imagePath}
+                style={{
+                    position: "absolute",
+                    left: mousePosition.x - piece.size / 2,
+                    top: mousePosition.y - piece.size / 2,
+                    width: piece.size + "px",
+                    height: piece.size + "px",
+                }}
+                />
+        )
+    };
 
     useEffect(() => {
         function moveTile(xMovement: number, yMovement: number) {
@@ -297,19 +324,68 @@ function Chessboard(props: SizeProps) {
         };
 
         function handleClick(event: MouseEvent) {
-            // pass
+            const target = event.target;
+
+            if (target) {
+                if (isChessPiece(target)) {
+                    // nice
+                }
+            }
+        }
+
+        function handleDragStart(event: DragEvent) {
+            const target = event.target;
+
+            if (target) {
+                if (isChessPiece(target)) {
+                    const elem = target as HTMLImageElement;
+                    setDraggingPiece(elem.getAttribute("id"));
+                } else if (isChessboardTile(target)) {
+                    if (pieces) {
+                        for (const pieceIndex in pieces) {
+                            const piece = pieces[pieceIndex];
+                            const targetElem = target as HTMLDivElement;
+                            if (getTileKey(piece.y, piece.x) === targetElem.id) {
+                                setDraggingPiece(piece.id);
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // While this sounds like it should be a DragEvent/dragend event, it's actually going to be mouseup here since
+        // the page is being re-rendered and the drag state is lost
+        function handleDragEnd(event: MouseEvent) {
+            if (draggingPiece) {
+                setDraggingPiece(null)
+            }
         }
 
         function handleHover(event: MouseEvent) {
-            let target = event.target;
-            if (target instanceof HTMLImageElement) {
-                target = target.parentElement as HTMLDivElement;
-            }
-            if (target instanceof HTMLDivElement) {
-                if (isTileKey(target.id)) {
-                    setHighlightedTile(target.id);
+            if (event.target) {
+                let target = event.target as HTMLElement
+                // It it's a chess piece, change the target to its parent tile.
+                if (isChessPiece(target) && target.parentElement) {
+                    target = target.parentElement;
+                }
+
+                // If it's a tile, highlight it.
+                if (isChessboardTile(target)) {
+                    if (isTileKey(target.id)) {
+                        setHighlightedTile(target.id);
+                    }
                 }
             }
+        }
+
+        function updateMousePosition(event: MouseEvent) {
+            const newMousePos = {
+                x: event.clientX,
+                y: event.clientY,
+            }
+            setMousePosition(newMousePos);
         }
 
         document.addEventListener("keydown", handleKeyDown);
@@ -317,22 +393,33 @@ function Chessboard(props: SizeProps) {
         document.addEventListener("mousedown", handleClick);
         document.addEventListener("mouseover", handleHover);
 
+        // Handling of piece clicking and dragging
+        document.addEventListener("dragstart", handleDragStart);
+        document.addEventListener("mouseup", handleDragEnd);
+        document.addEventListener("mousemove", updateMousePosition);
+
         // Cleanup function, so it doesn't add the event listeners repeatedly
         return () => {
             document.removeEventListener("keydown", handleKeyDown);
             document.removeEventListener("keyup", handleKeyUp);
             document.removeEventListener("mousedown", handleClick);
+            document.removeEventListener("mouseover", handleHover);
+            document.removeEventListener("dragstart", handleDragStart);
+            document.removeEventListener("mouseup", handleDragEnd);
+            document.removeEventListener("mousemove", updateMousePosition);
         };
 
-    }, [highlightedTile, shiftHeld, props]);
+    }, [draggingPiece, mousePosition, highlightedTile, shiftHeld, pieces, props]);
 
     const SIZECALC = `${props.tileSize * props.boardSize}px`;
 
     return (
         <div 
             className="flex justify-center"
+            id="chessboard"
             style={{ width: SIZECALC, height: SIZECALC }}>
             {tiles}
+            {draggingPiece ? cursorFollower : null}
         </div>
     );
 };
