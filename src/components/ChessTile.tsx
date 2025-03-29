@@ -20,22 +20,26 @@ interface Props {
     border: TileColor,
     getCenter(): Coordinate,
     drawPiece: ChessPieceProps | null,
+    highlighted: boolean,
 };
 
+const PLAYER_COLOR = "white"
 const WHITE_COLOR = "cornsilk";
 const BLACK_COLOR = "chocolate";
+const HIGHLIGHT_COLOR = "lightgreen";
 
 function ChessTile(props: Props) {
     const xPx: string = `${(props.x * props.size)}px`;
     const yPx: string = `${(props.y * props.size)}px`;
 
     let color = WHITE_COLOR;
-    if (props.color === "lightgreen") {
-        // We're highlighted.
-        color = "lightgreen";
-    } else if (props.color === "black") {
+    if (props.color === "black") {
         color = BLACK_COLOR;
     };
+
+    if (props.highlighted) {
+        color = HIGHLIGHT_COLOR;
+    }
 
     if (props.drawPiece) {
         return (
@@ -48,7 +52,8 @@ function ChessTile(props: Props) {
                         backgroundColor: color,
                         height: props.size + "px",
                         width: props.size + "px",
-                        border: `${props.size / 8}px solid ${props.border === "white" ? "cornsilk" : "chocolate"}`
+                        border: `${props.size / 8}px solid ${props.border === "white" ? WHITE_COLOR : BLACK_COLOR }`,
+                        cursor: props.drawPiece.color === PLAYER_COLOR ? "grab" : "default",
                     }}
                     id={props.id}
                     key={props.id}>
@@ -58,6 +63,7 @@ function ChessTile(props: Props) {
                             x={props.drawPiece.x}
                             y={props.drawPiece.y}
                             size={props.drawPiece.size}
+                            color={props.drawPiece.color}
                             imagePath={props.drawPiece.imagePath}
                         />
                 </div>

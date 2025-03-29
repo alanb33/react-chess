@@ -4,6 +4,7 @@ export interface ChessPieceProps {
     y: number,
     size: number,
     imagePath: string,
+    color: string,
 };
 
 function ChessPiece(props: ChessPieceProps) {

@@ -121,6 +121,7 @@ function Chessboard(props: SizeProps) {
                 x: tile.x,
                 y: tile.y,
                 size: tile.size,
+                color: piece.color,
                 imagePath: `src/assets/images/${piece.name}-${piece.color[0]}.png`
             };
 
@@ -216,6 +217,7 @@ function Chessboard(props: SizeProps) {
                 break;
             }
         }
+        const isHighlighted = chessboard[tile].id === highlightedTile;
         return (
             <ChessTile 
                 id={chessboard[tile].id}
@@ -223,10 +225,11 @@ function Chessboard(props: SizeProps) {
                 x={chessboard[tile].x}
                 y={chessboard[tile].y}
                 size={chessboard[tile].size}
-                color={chessboard[tile].id === highlightedTile ? "lightgreen" : chessboard[tile].color}
+                color={chessboard[tile].color}
                 border={chessboard[tile].color}
                 getCenter={chessboard[tile].getCenter}
                 drawPiece={drawPiece}
+                highlighted={isHighlighted}
             />
         )
     });
@@ -294,6 +297,10 @@ function Chessboard(props: SizeProps) {
         };
 
         function handleClick(event: MouseEvent) {
+            // pass
+        }
+
+        function handleHover(event: MouseEvent) {
             let target = event.target;
             if (target instanceof HTMLImageElement) {
                 target = target.parentElement as HTMLDivElement;
@@ -308,6 +315,7 @@ function Chessboard(props: SizeProps) {
         document.addEventListener("keydown", handleKeyDown);
         document.addEventListener("keyup", handleKeyUp);
         document.addEventListener("mousedown", handleClick);
+        document.addEventListener("mouseover", handleHover);
 
         // Cleanup function, so it doesn't add the event listeners repeatedly
         return () => {
