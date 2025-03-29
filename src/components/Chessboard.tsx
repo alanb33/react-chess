@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-import ChessPiece, { ChessPieceProps } from "./ChessPiece";
+import { ChessPieceProps } from "./ChessPiece";
 import ChessTile, { ChessTileInterface } from "./ChessTile"
 import { Coordinate, SizeProps, TileColor } from "./CommonTypes";
 
@@ -58,6 +58,7 @@ function Chessboard(props: SizeProps) {
     const [shiftHeld, setShiftHeld] = useState(false);
 
     let tempChessboard: TileGrid = {};
+    let tempPieces: PieceDict = {};
 
     function placePieces(): PieceDict {
 
@@ -122,6 +123,7 @@ function Chessboard(props: SizeProps) {
                 size: tile.size,
                 imagePath: `src/assets/images/${piece.name}-${piece.color[0]}.png`
             };
+
             newPieces[newPiece.id] = newPiece;
         }
 
@@ -181,35 +183,53 @@ function Chessboard(props: SizeProps) {
         return newChessboard;
     }
 
+    // First renderings
+
     if (Object.keys(chessboard).length === 0) {
         tempChessboard = buildChessboard();
         setChessboard(tempChessboard);
-        setPieces(placePieces());
     }
 
-    const tileKeys = Object.keys(chessboard)
-    const tiles = tileKeys.map((tile) => (
-        <ChessTile 
-            id={chessboard[tile].id}
-            key={chessboard[tile].id}
-            x={chessboard[tile].x}
-            y={chessboard[tile].y}
-            size={chessboard[tile].size}
-            color={chessboard[tile].id === highlightedTile ? "lightgreen" : chessboard[tile].color}
-            border={chessboard[tile].color}
-            getCenter={chessboard[tile].getCenter} />
-    ));
+    if (Object.keys(pieces).length === 0) {
+        tempPieces = placePieces();
+        setPieces(tempPieces);
+    }
 
-    const pieceKeys = Object.keys(pieces)
-    const pieceElements = pieceKeys.map((piece) => (
-        <ChessPiece 
-            id={pieces[piece].id}
-            key={pieces[piece].id}
-            x={pieces[piece].x}
-            y={pieces[piece].y}
-            size={pieces[piece].size}
-            imagePath={pieces[piece].imagePath} />
-    ));
+    function getPieceDict() {
+        if (Object.keys(pieces).length === 0) {
+            return tempPieces;
+        }
+        return pieces;
+    }
+
+    // Creating element tags
+
+    const tileKeys = Object.keys(chessboard)
+    const tiles = tileKeys.map((tile) => {
+        let drawPiece = null;
+        const pieceDict = getPieceDict();
+        for (const pieceKey in pieceDict) {
+            const piece = pieceDict[pieceKey];
+            const pieceTile = getTileKey(piece.y, piece.x);
+            if (tile === pieceTile) {
+                drawPiece = piece;
+                break;
+            }
+        }
+        return (
+            <ChessTile 
+                id={chessboard[tile].id}
+                key={chessboard[tile].id}
+                x={chessboard[tile].x}
+                y={chessboard[tile].y}
+                size={chessboard[tile].size}
+                color={chessboard[tile].id === highlightedTile ? "lightgreen" : chessboard[tile].color}
+                border={chessboard[tile].color}
+                getCenter={chessboard[tile].getCenter}
+                drawPiece={drawPiece}
+            />
+        )
+    });
 
     useEffect(() => {
         function moveTile(xMovement: number, yMovement: number) {
@@ -248,7 +268,6 @@ function Chessboard(props: SizeProps) {
             switch (event.key) {
                 case "Shift":
                     if (!shiftHeld) {
-                        console.log("Holding shift");
                         setShiftHeld(true);
                     }
                     break;
@@ -275,8 +294,11 @@ function Chessboard(props: SizeProps) {
         };
 
         function handleClick(event: MouseEvent) {
-            const target = event.target as Element;
-            if (target) {
+            let target = event.target;
+            if (target instanceof HTMLImageElement) {
+                target = target.parentElement as HTMLDivElement;
+            }
+            if (target instanceof HTMLDivElement) {
                 if (isTileKey(target.id)) {
                     setHighlightedTile(target.id);
                 }
@@ -303,7 +325,6 @@ function Chessboard(props: SizeProps) {
             className="flex justify-center"
             style={{ width: SIZECALC, height: SIZECALC }}>
             {tiles}
-            {pieceElements}
         </div>
     );
 };

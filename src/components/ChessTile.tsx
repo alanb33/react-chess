@@ -1,3 +1,4 @@
+import ChessPiece, { ChessPieceProps } from "./ChessPiece"
 import { Coordinate, TileColor } from "./CommonTypes";
 import "./ChessTile.css";
 
@@ -18,6 +19,7 @@ interface Props {
     color: TileColor,
     border: TileColor,
     getCenter(): Coordinate,
+    drawPiece: ChessPieceProps | null,
 };
 
 const WHITE_COLOR = "cornsilk";
@@ -35,23 +37,51 @@ function ChessTile(props: Props) {
         color = BLACK_COLOR;
     };
 
-    return (
-        <>
-            <div
-                className={`absolute`}
-                style={{ 
-                    left: xPx, 
-                    top: yPx, 
-                    backgroundColor: color,
-                    height: props.size + "px",
-                    width: props.size + "px",
-                    border: `${props.size / 8}px solid ${props.border === "white" ? "cornsilk" : "chocolate"}`
-                }}
-                id={props.id}
-                key={props.id}>
-            </div>
-        </>
-    )
+    if (props.drawPiece) {
+        return (
+            <>
+                <div
+                    className={`absolute`}
+                    style={{ 
+                        left: xPx, 
+                        top: yPx, 
+                        backgroundColor: color,
+                        height: props.size + "px",
+                        width: props.size + "px",
+                        border: `${props.size / 8}px solid ${props.border === "white" ? "cornsilk" : "chocolate"}`
+                    }}
+                    id={props.id}
+                    key={props.id}>
+                        <ChessPiece 
+                            id={props.drawPiece.id}
+                            key={props.drawPiece.id}
+                            x={props.drawPiece.x}
+                            y={props.drawPiece.y}
+                            size={props.drawPiece.size}
+                            imagePath={props.drawPiece.imagePath}
+                        />
+                </div>
+            </>
+        );
+    } else {
+        return (
+            <>
+                <div
+                    className={`absolute`}
+                    style={{ 
+                        left: xPx, 
+                        top: yPx, 
+                        backgroundColor: color,
+                        height: props.size + "px",
+                        width: props.size + "px",
+                        border: `${props.size / 8}px solid ${props.border === "white" ? "cornsilk" : "chocolate"}`
+                    }}
+                    id={props.id}
+                    key={props.id}>
+                </div>
+            </>
+        );
+    };
 };
 
 export type { ChessTileInterface };
