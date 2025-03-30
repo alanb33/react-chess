@@ -5,6 +5,8 @@ import ChessTile, { ChessTileInterface } from "./ChessTile"
 import { Coordinate, MousePos, TileColor } from "./CommonTypes";
 
 import Globals from "../config/globals";
+import { isChessPiece, isChessboardTile, isTileKey } from "../utils/validators";
+import { Col, getTileKeyFromCoordinates, translationKey } from '../utils/tile-utils';
 
 import "./Chessboard.css";
 
@@ -15,50 +17,6 @@ interface TileGrid {
 interface PieceDict {
     [key: string]: ChessPieceProps;
 }
-
-type Col = "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H";
-
-const translationKey: Array<Col> = [
-    "A",
-    "B",
-    "C",
-    "D",
-    "E",
-    "F",
-    "G",
-    "H"
-];
-
-function isChessPiece(element: EventTarget) {
-    return (element instanceof HTMLImageElement && element.getAttribute("chess-piece"));
-}
-
-function isChessboardTile(element: EventTarget) {
-    return (element instanceof HTMLDivElement && element.getAttribute("chess-tile"));
-}
-
-function isTileKey(key: string) {
-    if (key.length === 2) {
-        const letter = key[0].toLowerCase();
-        if (letter >= "a" && letter <= "h") {
-            const number = parseInt(key[1]);
-            if (number) {
-                if (number >= 1 && number <= 8) {
-                    return true;
-                }
-                return false;
-            }
-            return false;
-        }
-        return false;
-    }
-    return false;
-}
-
-function getTileKey(row: number, col: number): string {
-    const colLetter: Col = translationKey[col - 1];
-    return `${colLetter}${row}`;
-};
 
 function Chessboard() {
 
@@ -174,7 +132,7 @@ function Chessboard() {
                     }
                 }
     
-                const tileKey = getTileKey(row, col);
+                const tileKey = getTileKeyFromCoordinates(col, row);
                 const chessTile: ChessTileInterface = {
                     id: tileKey,
                     x: col,
@@ -223,7 +181,7 @@ function Chessboard() {
         const pieceDict = getPieceDict();
         for (const pieceKey in pieceDict) {
             const piece = pieceDict[pieceKey];
-            const pieceTile = getTileKey(piece.y, piece.x);
+            const pieceTile = getTileKeyFromCoordinates(piece.x, piece.y);
             if (tile === pieceTile && piece.id != draggingPiece)  {
                 drawPiece = piece;
                 break;
@@ -286,7 +244,7 @@ function Chessboard() {
                 console.log("Hit vertical limit.");
             }
     
-            const newTile = getTileKey(destY, destX);
+            const newTile = getTileKeyFromCoordinates(destX, destY);
 
             if (newTile !== highlightedTile) {
                 setHighlightedTile(newTile);
@@ -348,7 +306,7 @@ function Chessboard() {
                         for (const pieceIndex in pieces) {
                             const piece = pieces[pieceIndex];
                             const targetElem = target as HTMLDivElement;
-                            if (getTileKey(piece.y, piece.x) === targetElem.id) {
+                            if (getTileKeyFromCoordinates(piece.x, piece.y) === targetElem.id) {
                                 setDraggingPiece(piece.id);
                                 break;
                             }
