@@ -2,11 +2,12 @@ import ChessPiece, { ChessPieceProps } from "./ChessPiece"
 import { Coordinate, TileColor } from "./CommonTypes";
 import "./ChessTile.css";
 
+import Globals from "../config/globals"
+
 interface ChessTileInterface {
     id: string,
     x: number,
     y: number,
-    size: number,
     color: TileColor;
     getCenter(): Coordinate
 };
@@ -15,7 +16,6 @@ interface Props {
     id: string,
     x: number,
     y: number,
-    size: number,
     color: TileColor,
     border: TileColor,
     getCenter(): Coordinate,
@@ -29,8 +29,8 @@ const BLACK_COLOR = "chocolate";
 const HIGHLIGHT_COLOR = "lightgreen";
 
 function ChessTile(props: Props) {
-    const xPx: string = `${(props.x * props.size)}px`;
-    const yPx: string = `${(props.y * props.size)}px`;
+    const xPx: string = `${(props.x * Globals.TILESIZE)}px`;
+    const yPx: string = `${(props.y * Globals.TILESIZE)}px`;
 
     let color = WHITE_COLOR;
     if (props.color === "black") {
@@ -51,9 +51,9 @@ function ChessTile(props: Props) {
                         left: xPx, 
                         top: yPx, 
                         backgroundColor: color,
-                        height: props.size + "px",
-                        width: props.size + "px",
-                        border: `${props.size / 8}px solid ${props.border === "white" ? WHITE_COLOR : BLACK_COLOR }`,
+                        height: Globals.TILESIZE + "px",
+                        width: Globals.TILESIZE + "px",
+                        border: `${Globals.TILESIZE / Globals.BORDER_FRACTION}px solid ${props.border === "white" ? WHITE_COLOR : BLACK_COLOR }`,
                         //cursor: props.drawPiece.color === PLAYER_COLOR ? "grab" : "default",
                     }}
                     id={props.id}
@@ -63,7 +63,6 @@ function ChessTile(props: Props) {
                             key={props.drawPiece.id}
                             x={props.drawPiece.x}
                             y={props.drawPiece.y}
-                            size={props.drawPiece.size}
                             color={props.drawPiece.color}
                             imagePath={props.drawPiece.imagePath}
                         />
@@ -80,9 +79,9 @@ function ChessTile(props: Props) {
                         left: xPx, 
                         top: yPx, 
                         backgroundColor: color,
-                        height: props.size + "px",
-                        width: props.size + "px",
-                        border: `${props.size / 8}px solid ${props.border === "white" ? "cornsilk" : "chocolate"}`
+                        height: Globals.TILESIZE + "px",
+                        width: Globals.TILESIZE + "px",
+                        border: `${Globals.TILESIZE / Globals.BORDER_FRACTION}px solid ${props.border === "white" ? "cornsilk" : "chocolate"}`
                     }}
                     id={props.id}
                     key={props.id}>
