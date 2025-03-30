@@ -1,3 +1,5 @@
+import Globals from "../config/globals";
+
 export interface ChessPieceProps {
     id: string,
     x: number,
@@ -13,8 +15,9 @@ function ChessPiece(props: ChessPieceProps) {
             className={"size-full"}
             chess-piece={"true"}
             style={{ 
-                zIndex: 1,
-                cursor: "grab"
+                zIndex: Globals.Z_INDEX.PIECE,
+                cursor: "grab",
+                position: "relative"
             }}>
             </img>
     );

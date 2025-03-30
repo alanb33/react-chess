@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { ChessPieceProps } from "./ChessPiece";
 import ChessTile, { ChessTileInterface } from "./ChessTile"
 import { Coordinate, MousePos, TileColor } from "./CommonTypes";
+import HighlightedTile from "./HighlightedTile";
 
 import Globals from "../config/globals";
 import { isChessPiece, isChessboardTile, isTileKey } from "../utils/validators";
@@ -24,7 +25,7 @@ function Chessboard() {
     const [chessboard, setChessboard] = useState<TileGrid>({});
 
     const [pieces, setPieces] = useState<PieceDict>({});
-    const [highlightedTile, setHighlightedTile] = useState("A1");
+    const [highlightedTile, setHighlightedTile] = useState("");
     const [shiftHeld, setShiftHeld] = useState(false);
     const [draggingPiece, setDraggingPiece] = useState<string | null>(null)
     const [mousePosition, setMousePosition] = useState<MousePos>({x: 0, y: 0});
@@ -187,7 +188,6 @@ function Chessboard() {
                 break;
             }
         }
-        const isHighlighted = chessboard[tile].id === highlightedTile;
         return (
             <ChessTile 
                 id={chessboard[tile].id}
@@ -198,12 +198,11 @@ function Chessboard() {
                 border={chessboard[tile].color}
                 getCenter={chessboard[tile].getCenter}
                 drawPiece={drawPiece}
-                highlighted={isHighlighted}
             />
         )
     });
 
-    const cursorFollower = () => {
+    const cursorFollowerElement = () => {
         if (draggingPiece) {
             const piece = pieces[draggingPiece];
             return (
@@ -217,10 +216,29 @@ function Chessboard() {
                         height: `${Globals.TILESIZE}px`,
                     }}
                     />
-            )
-        }
+            );
+        };
         return null;
-    }
+    };
+
+    const highlightedTileElement = () => {
+        console.log(`highlightedTile = [${highlightedTile}]`);
+        if (highlightedTile !== "") {
+            console.log("highlightedTile is not empty");
+            if (isTileKey(highlightedTile)) {
+                console.log("Tile key confirmed")
+                const tile = chessboard[highlightedTile];
+                return (
+                    <HighlightedTile 
+                        coordinates={{x: tile.x, y: tile.y}}
+                        color="lightgreen"
+                        />
+                );
+            };
+        };
+        return null
+    };
+        
      
     // TODO: Probably using too many things here. Read up on hooks and see what can be better-placed.
     useEffect(() => {
@@ -381,7 +399,8 @@ function Chessboard() {
             id="chessboard"
             style={{ width: SIZECALC, height: SIZECALC }}>
             {tiles}
-            {draggingPiece ? cursorFollower : null}
+            {cursorFollowerElement()}
+            {highlightedTileElement()}
         </div>
     );
 };

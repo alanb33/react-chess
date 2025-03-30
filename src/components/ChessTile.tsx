@@ -20,13 +20,10 @@ interface Props {
     border: TileColor,
     getCenter(): Coordinate,
     drawPiece: ChessPieceProps | null,
-    highlighted: boolean,
 };
 
-const PLAYER_COLOR = "white"
 const WHITE_COLOR = "cornsilk";
 const BLACK_COLOR = "chocolate";
-const HIGHLIGHT_COLOR = "lightgreen";
 
 function ChessTile(props: Props) {
     const xPx: string = `${(props.x * Globals.TILESIZE)}px`;
@@ -36,10 +33,6 @@ function ChessTile(props: Props) {
     if (props.color === "black") {
         color = BLACK_COLOR;
     };
-
-    if (props.highlighted) {
-        color = HIGHLIGHT_COLOR;
-    }
 
     if (props.drawPiece) {
         return (
@@ -53,7 +46,7 @@ function ChessTile(props: Props) {
                         backgroundColor: color,
                         height: Globals.TILESIZE + "px",
                         width: Globals.TILESIZE + "px",
-                        border: `${Globals.TILESIZE / Globals.BORDER_FRACTION}px solid ${props.border === "white" ? WHITE_COLOR : BLACK_COLOR }`,
+                        zIndex: Globals.Z_INDEX.BOARD,
                         //cursor: props.drawPiece.color === PLAYER_COLOR ? "grab" : "default",
                     }}
                     id={props.id}
