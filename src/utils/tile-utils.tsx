@@ -1,6 +1,6 @@
-export type Col = "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H";
+export type ColumnLetter = "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H"
 
-export const translationKey: Array<Col> = [
+export const columnTranslationKey: Array<ColumnLetter> = [
     "A",
     "B",
     "C",
@@ -12,6 +12,6 @@ export const translationKey: Array<Col> = [
 ];
 
 export function getTileKeyFromCoordinates(x: number, y: number): string {
-    const colLetter: Col = translationKey[x - 1];
+    const colLetter: ColumnLetter = columnTranslationKey[x - 1];
     return `${colLetter}${y}`;
 };

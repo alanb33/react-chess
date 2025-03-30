@@ -6,7 +6,7 @@ import { Coordinate, MousePos, TileColor } from "./CommonTypes";
 
 import Globals from "../config/globals";
 import { isChessPiece, isChessboardTile, isTileKey } from "../utils/validators";
-import { Col, getTileKeyFromCoordinates, translationKey } from '../utils/tile-utils';
+import { ColumnLetter, getTileKeyFromCoordinates, columnTranslationKey } from '../utils/tile-utils';
 
 import "./Chessboard.css";
 
@@ -40,7 +40,7 @@ function Chessboard() {
 
         for (let i = 0; i < Globals.BOARDSIZE; i++) {
             const columnPieces = []
-            const columnLetter = translationKey[i];
+            const columnLetter = columnTranslationKey[i];
 
             const pawn_white = {name: "pawn", color: "white", tile: `${columnLetter}2`};
             const pawn_black = {name: "pawn", color: "black", tile: `${columnLetter}7`};
@@ -225,7 +225,7 @@ function Chessboard() {
     useEffect(() => {
         function moveTile(xMovement: number, yMovement: number) {
             const tileLetter = highlightedTile[0];
-            const x = translationKey.indexOf(tileLetter as Col) + 1;
+            const x = columnTranslationKey.indexOf(tileLetter as ColumnLetter) + 1;
             const y = parseInt(highlightedTile[1]);
         
             let destX = x + xMovement;
