@@ -1,4 +1,4 @@
-# Vite-Chess
+# React-Chess
 
 This is a practice attempt at implementing chess using React. <strong>It's currently a work in progress, and not yet functional!</strong> Primarily, this is a project for me to learn React by recreating Chess.
 
