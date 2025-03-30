@@ -203,23 +203,24 @@ function Chessboard() {
         )
     });
 
-    let cursorFollower = null;
-    if (draggingPiece) {
-        const piece = pieces[draggingPiece];
-        cursorFollower = (
-            <img
-                src={piece.imagePath}
-                style={{
-                    position: "absolute",
-                    left: mousePosition.x - Globals.TILESIZE / 2,
-                    top: mousePosition.y - Globals.TILESIZE / 2,
-                    width: `${Globals.TILESIZE}px`,
-                    height: `${Globals.TILESIZE}px`,
-                }}
-                />
-        )
-    };
-
+    const cursorFollower = () => {
+        if (draggingPiece) {
+            const piece = pieces[draggingPiece];
+            return (
+                <img
+                    src={piece.imagePath}
+                    style={{
+                        position: "absolute",
+                        left: mousePosition.x - Globals.TILESIZE / 2,
+                        top: mousePosition.y - Globals.TILESIZE / 2,
+                        width: `${Globals.TILESIZE}px`,
+                        height: `${Globals.TILESIZE}px`,
+                    }}
+                    />
+            )
+        }
+        return null;
+    }
      
     // TODO: Probably using too many things here. Read up on hooks and see what can be better-placed.
     useEffect(() => {
