@@ -1,6 +1,6 @@
 # Vite-Chess
 
-This is a practice attempt at implementing chess using React. It's currently a work in progress!
+This is a practice attempt at implementing chess using React. <strong>It's currently a work in progress, and not yet functional!</strong> Primarily, this is a project for me to learn React by recreating Chess.
 
 Images for chess pieces are created by CBurnett.
 
