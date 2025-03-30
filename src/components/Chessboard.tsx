@@ -60,7 +60,10 @@ function getTileKey(row: number, col: number): string {
 
 function Chessboard(props: SizeProps) {
 
+    // TODO: Chessboard does not need to be a state object.
     const [chessboard, setChessboard] = useState<TileGrid>({});
+
+    // 
     const [pieces, setPieces] = useState<PieceDict>({});
     const [highlightedTile, setHighlightedTile] = useState("A1");
     const [shiftHeld, setShiftHeld] = useState(false);
@@ -261,6 +264,11 @@ function Chessboard(props: SizeProps) {
         )
     };
 
+    /* 
+        TODO: Probably using too many things here. Props especially doesn't
+        need to be a referesh trigger. Read up on hooks and see what can be
+        better-placed.
+    */ 
     useEffect(() => {
         function moveTile(xMovement: number, yMovement: number) {
             const tileLetter = highlightedTile[0];
