@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react';
 
 import { ChessPieceProps } from "./ChessPiece";
 import ChessTile, { ChessTileInterface } from "./ChessTile"
-import { Coordinate, MousePos, SizeProps, TileColor } from "./CommonTypes";
+import { Coordinate, MousePos, TileColor } from "./CommonTypes";
+
+import Globals from "../config/globals";
 
 import "./Chessboard.css";
 
@@ -58,12 +60,11 @@ function getTileKey(row: number, col: number): string {
     return `${colLetter}${row}`;
 };
 
-function Chessboard(props: SizeProps) {
+function Chessboard() {
 
     // TODO: Chessboard does not need to be a state object.
     const [chessboard, setChessboard] = useState<TileGrid>({});
 
-    // 
     const [pieces, setPieces] = useState<PieceDict>({});
     const [highlightedTile, setHighlightedTile] = useState("A1");
     const [shiftHeld, setShiftHeld] = useState(false);
@@ -79,7 +80,7 @@ function Chessboard(props: SizeProps) {
 
         const initialPieces = []
 
-        for (let i = 0; i < props.boardSize; i++) {
+        for (let i = 0; i < Globals.BOARDSIZE; i++) {
             const columnPieces = []
             const columnLetter = translationKey[i];
 
@@ -133,7 +134,6 @@ function Chessboard(props: SizeProps) {
                 id: key,
                 x: tile.x,
                 y: tile.y,
-                size: tile.size,
                 color: piece.color,
                 imagePath: `src/assets/images/${piece.name}-${piece.color[0]}.png`
             };
@@ -149,15 +149,15 @@ function Chessboard(props: SizeProps) {
         
         const newChessboard: TileGrid = {};
 
-        for (let row = props.boardSize; row >= 1; row-- ) {
-            for (let col = 1; col <= props.boardSize; col++ ) {
+        for (let row = Globals.BOARDSIZE; row >= 1; row-- ) {
+            for (let col = 1; col <= Globals.BOARDSIZE; col++ ) {
                 /*
                     Tiles are represents as letter-number, where a letter is a
                     reference to the column, and the number is the row that the
                     tile is in. For example, the first column is A and the last
                     column is H. Importantly, numbering starts from the bottom to
                     the top, rather than top to bottom, so to instantiate the 
-                    board, I must begin at props.boardSize.
+                    board, I must begin at Globals.BOARDSIZE.
                 */
     
                 // Alternate tile colors by row evenness
@@ -179,12 +179,11 @@ function Chessboard(props: SizeProps) {
                     id: tileKey,
                     x: col,
                     y: row,
-                    size: props.tileSize,
                     color: tileColor,
                     getCenter(): Coordinate {
                         const coord: Coordinate = {
-                            x: ((this.x - 1) * props.tileSize) / 2,
-                            y: ((this.y - 1) * props.tileSize) / 2,
+                            x: ((this.x - 1) * Globals.TILESIZE) / 2,
+                            y: ((this.y - 1) * Globals.TILESIZE) / 2,
                         };
                         return coord;
                     }
@@ -237,7 +236,6 @@ function Chessboard(props: SizeProps) {
                 key={chessboard[tile].id}
                 x={chessboard[tile].x}
                 y={chessboard[tile].y}
-                size={chessboard[tile].size}
                 color={chessboard[tile].color}
                 border={chessboard[tile].color}
                 getCenter={chessboard[tile].getCenter}
@@ -255,20 +253,17 @@ function Chessboard(props: SizeProps) {
                 src={piece.imagePath}
                 style={{
                     position: "absolute",
-                    left: mousePosition.x - piece.size / 2,
-                    top: mousePosition.y - piece.size / 2,
-                    width: piece.size + "px",
-                    height: piece.size + "px",
+                    left: mousePosition.x - Globals.TILESIZE / 2,
+                    top: mousePosition.y - Globals.TILESIZE / 2,
+                    width: `${Globals.TILESIZE}px`,
+                    height: `${Globals.TILESIZE}px`,
                 }}
                 />
         )
     };
 
-    /* 
-        TODO: Probably using too many things here. Props especially doesn't
-        need to be a referesh trigger. Read up on hooks and see what can be
-        better-placed.
-    */ 
+     
+    // TODO: Probably using too many things here. Read up on hooks and see what can be better-placed.
     useEffect(() => {
         function moveTile(xMovement: number, yMovement: number) {
             const tileLetter = highlightedTile[0];
@@ -280,14 +275,14 @@ function Chessboard(props: SizeProps) {
 
             console.log(`Current X/Y before movement is ${x}/${y}`);
             // Horizontal clamping
-            if (destX < 1 || destX > props.boardSize) {
-                destX = destX < 1 ? 1 : props.boardSize;
+            if (destX < 1 || destX > Globals.BOARDSIZE) {
+                destX = destX < 1 ? 1 : Globals.BOARDSIZE;
                 console.log("Hit horizontal limit.");
             }
         
             // Vertical clamping
-            if (destY < 1 || destY > props.boardSize) {
-                destY = destY < 1 ? 1 : props.boardSize;
+            if (destY < 1 || destY > Globals.BOARDSIZE) {
+                destY = destY < 1 ? 1 : Globals.BOARDSIZE;
                 console.log("Hit vertical limit.");
             }
     
@@ -302,7 +297,7 @@ function Chessboard(props: SizeProps) {
         };
     
         function handleKeyDown(event: KeyboardEvent) {
-            const distance = shiftHeld ? props.boardSize : 1;
+            const distance = shiftHeld ? Globals.BOARDSIZE : 1;
             switch (event.key) {
                 case "Shift":
                     if (!shiftHeld) {
@@ -417,9 +412,9 @@ function Chessboard(props: SizeProps) {
             document.removeEventListener("mousemove", updateMousePosition);
         };
 
-    }, [draggingPiece, mousePosition, highlightedTile, shiftHeld, pieces, props]);
+    }, [draggingPiece, mousePosition, highlightedTile, shiftHeld, pieces]);
 
-    const SIZECALC = `${props.tileSize * props.boardSize}px`;
+    const SIZECALC = `${Globals.TILESIZE * Globals.BOARDSIZE}px`;
 
     return (
         <div 
