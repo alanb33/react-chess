@@ -12,12 +12,15 @@ function ChessPiece(props: ChessPieceProps) {
     return (
         <img src={props.imagePath}
             id={props.id}
-            className={"size-full"}
+            className={"size-full absolute"}
             chess-piece={"true"}
             style={{ 
                 zIndex: Globals.Z_INDEX.PIECE,
                 cursor: "grab",
-                position: "relative"
+                left: Globals.TILESIZE * props.x,
+                top: Globals.TILESIZE * props.y,
+                width: Globals.TILESIZE,
+                height: Globals.TILESIZE,
             }}>
             </img>
     );
