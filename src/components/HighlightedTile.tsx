@@ -18,7 +18,6 @@ function HighlightedTile(props: HighlightedTileInterface) {
     return (
         <div 
             id = "highlightedTile"
-            key = "highlightedTile"
             className = "absolute"
             style = {{
                 zIndex: Globals.Z_INDEX.HIGHLIGHT,
