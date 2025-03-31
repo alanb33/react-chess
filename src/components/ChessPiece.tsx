@@ -6,6 +6,7 @@ export interface ChessPieceProps {
     y: number,
     imagePath: string,
     color: string,
+    boardPosition: string,
 };
 
 function ChessPiece(props: ChessPieceProps) {
@@ -14,6 +15,7 @@ function ChessPiece(props: ChessPieceProps) {
             id={props.id}
             className={"size-full absolute"}
             chess-piece={"true"}
+            board-position={props.boardPosition}
             style={{ 
                 zIndex: Globals.Z_INDEX.PIECE,
                 cursor: "grab",

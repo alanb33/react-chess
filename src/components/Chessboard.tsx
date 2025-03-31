@@ -20,8 +20,6 @@ interface PieceDict {
 }
 
 function buildChessboard(): TileGrid {
-
-    console.log("Chessboard render");
         
     const newChessboard: TileGrid = {};
 
@@ -160,7 +158,8 @@ function Chessboard() {
                 x: tile.x,
                 y: tile.y,
                 color: piece.color,
-                imagePath: `src/assets/images/${piece.name}-${piece.color[0]}.png`
+                imagePath: `src/assets/images/${piece.name}-${piece.color[0]}.png`,
+                boardPosition: getTileKeyFromCoordinates(tile.x, tile.y)
             };
 
             newPieces[newPiece.id] = newPiece;
@@ -191,6 +190,8 @@ function Chessboard() {
             const piece = pieces[draggingPiece];
             return (
                 <img
+                    id="cursorFollower"
+                    key="cursorFollower"
                     src={piece.imagePath}
                     style={{
                         position: "absolute",
@@ -206,14 +207,12 @@ function Chessboard() {
     };
 
     const highlightedTileElement = () => {
-        console.log(`highlightedTile = [${highlightedTile}]`);
         if (highlightedTile !== "") {
-            console.log("highlightedTile is not empty");
             if (isTileKey(highlightedTile)) {
-                console.log("Tile key confirmed")
                 const tile = chessboard[highlightedTile];
                 return (
                     <HighlightedTile 
+                        key="highlightedTile"
                         coordinates={{x: tile.x, y: tile.y}}
                         color="lightgreen"
                         />
@@ -229,10 +228,12 @@ function Chessboard() {
         return (
             <ChessPiece
                 id={pieceData.id}
+                key={pieceData.id}
                 x={pieceData.x}
                 y={pieceData.y}
                 imagePath={pieceData.imagePath}
                 color={pieceData.color}
+                boardPosition={pieceData.boardPosition}
             />
         );
     });
@@ -343,14 +344,17 @@ function Chessboard() {
 
         function handleHover(event: MouseEvent) {
             if (event.target) {
-                let target = event.target as HTMLElement
+                const target = event.target as HTMLElement
                 // It it's a chess piece, change the target to its parent tile.
-                if (isChessPiece(target) && target.parentElement) {
-                    target = target.parentElement;
-                }
-
-                // If it's a tile, highlight it.
-                if (isChessboardTile(target)) {
+                if (isChessPiece(target)) {
+                    const associatedTileKey = target.getAttribute("board-position");
+                    if (associatedTileKey) {
+                        if (isTileKey(associatedTileKey)) {
+                            setHighlightedTile(associatedTileKey)
+                        };
+                    };
+                } else if (isChessboardTile(target)) {
+                    // Else, it's just a tile, so highlight it. 
                     if (isTileKey(target.id)) {
                         setHighlightedTile(target.id);
                     }
@@ -395,6 +399,7 @@ function Chessboard() {
         <div 
             className="flex justify-center"
             id="chessboard"
+            key="chessboard"
             style={{ width: SIZECALC, height: SIZECALC }}>
             {tiles}
             {cursorFollowerElement()}
