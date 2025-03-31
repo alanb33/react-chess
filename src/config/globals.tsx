@@ -2,7 +2,12 @@
 const Globals = {
     BOARDSIZE: 8,
     TILESIZE: 128,
-    BORDER_FRACTION: 8,
+    BORDER_FRACTION: 4,
+    Z_INDEX: {
+        BOARD: 0,
+        HIGHLIGHT: 1,
+        PIECE: 2,
+    },
 };
 
 export default Globals;
