@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-import { ChessPieceProps } from "./ChessPiece";
+import ChessPiece, { ChessPieceProps } from "./ChessPiece";
 import ChessTile, { ChessTileInterface } from "./ChessTile"
 import { Coordinate, MousePos, TileColor } from "./CommonTypes";
 import HighlightedTile from "./HighlightedTile";
@@ -19,10 +19,77 @@ interface PieceDict {
     [key: string]: ChessPieceProps;
 }
 
-function Chessboard() {
+function buildChessboard(): TileGrid {
 
-    // TODO: Chessboard does not need to be a state object.
-    const [chessboard, setChessboard] = useState<TileGrid>({});
+    console.log("Chessboard render");
+        
+    const newChessboard: TileGrid = {};
+
+    for (let row = Globals.BOARDSIZE; row >= 1; row-- ) {
+        for (let col = 1; col <= Globals.BOARDSIZE; col++ ) {
+            /*
+                Tiles are represents as letter-number, where a letter is a
+                reference to the column, and the number is the row that the
+                tile is in. For example, the first column is A and the last
+                column is H. Importantly, numbering starts from the bottom to
+                the top, rather than top to bottom, so to instantiate the 
+                board, I must begin at Globals.BOARDSIZE.
+            */
+
+            // Alternate tile colors by row evenness
+            let tileColor: TileColor = "white";
+            if (row % 2 === 1) {
+                // Odd row; odd tiles are white, even are black
+                if (col % 2 === 0) {
+                    tileColor = "black";
+                }
+            } else {
+                // Even row; odd tiles are black, even are white
+                if (col % 2 === 1) {
+                    tileColor = "black";
+                }
+            }
+
+            const tileKey = getTileKeyFromCoordinates(col, row);
+            const chessTile: ChessTileInterface = {
+                id: tileKey,
+                x: col,
+                y: row,
+                color: tileColor,
+                getCenter(): Coordinate {
+                    const coord: Coordinate = {
+                        x: ((this.x - 1) * Globals.TILESIZE) / 2,
+                        y: ((this.y - 1) * Globals.TILESIZE) / 2,
+                    };
+                    return coord;
+                }
+            };
+
+            newChessboard[tileKey] = chessTile;
+        };
+    };
+
+    return newChessboard;
+};
+
+const chessboard = buildChessboard();
+
+const tileKeys = Object.keys(chessboard)
+const tiles = tileKeys.map((tile) => {
+    return (
+        <ChessTile 
+            id={chessboard[tile].id}
+            key={chessboard[tile].id}
+            x={chessboard[tile].x}
+            y={chessboard[tile].y}
+            color={chessboard[tile].color}
+            border={chessboard[tile].color}
+            getCenter={chessboard[tile].getCenter}
+        />
+    )
+});
+
+function Chessboard() {
 
     const [pieces, setPieces] = useState<PieceDict>({});
     const [highlightedTile, setHighlightedTile] = useState("");
@@ -30,7 +97,6 @@ function Chessboard() {
     const [draggingPiece, setDraggingPiece] = useState<string | null>(null)
     const [mousePosition, setMousePosition] = useState<MousePos>({x: 0, y: 0});
 
-    let tempChessboard: TileGrid = {};
     let tempPieces: PieceDict = {};
 
     function placePieces(): PieceDict {
@@ -87,7 +153,7 @@ function Chessboard() {
         };
 
         for (const piece of initialPieces) {
-            const tile = tempChessboard[piece.tile];
+            const tile = chessboard[piece.tile];
             const key = `${piece.name}-${piece.color[0]}-${piece.tile}`;
             const newPiece: ChessPieceProps = {
                 id: key,
@@ -104,63 +170,7 @@ function Chessboard() {
 
     }
 
-    function buildChessboard(): TileGrid {
-        
-        const newChessboard: TileGrid = {};
-
-        for (let row = Globals.BOARDSIZE; row >= 1; row-- ) {
-            for (let col = 1; col <= Globals.BOARDSIZE; col++ ) {
-                /*
-                    Tiles are represents as letter-number, where a letter is a
-                    reference to the column, and the number is the row that the
-                    tile is in. For example, the first column is A and the last
-                    column is H. Importantly, numbering starts from the bottom to
-                    the top, rather than top to bottom, so to instantiate the 
-                    board, I must begin at Globals.BOARDSIZE.
-                */
-    
-                // Alternate tile colors by row evenness
-                let tileColor: TileColor = "white";
-                if (row % 2 === 1) {
-                    // Odd row; odd tiles are white, even are black
-                    if (col % 2 === 0) {
-                        tileColor = "black";
-                    }
-                } else {
-                    // Even row; odd tiles are black, even are white
-                    if (col % 2 === 1) {
-                        tileColor = "black";
-                    }
-                }
-    
-                const tileKey = getTileKeyFromCoordinates(col, row);
-                const chessTile: ChessTileInterface = {
-                    id: tileKey,
-                    x: col,
-                    y: row,
-                    color: tileColor,
-                    getCenter(): Coordinate {
-                        const coord: Coordinate = {
-                            x: ((this.x - 1) * Globals.TILESIZE) / 2,
-                            y: ((this.y - 1) * Globals.TILESIZE) / 2,
-                        };
-                        return coord;
-                    }
-                };
-    
-                newChessboard[tileKey] = chessTile;
-            };
-        };
-
-        return newChessboard;
-    }
-
     // First renderings
-
-    if (Object.keys(chessboard).length === 0) {
-        tempChessboard = buildChessboard();
-        setChessboard(tempChessboard);
-    }
 
     if (Object.keys(pieces).length === 0) {
         tempPieces = placePieces();
@@ -175,32 +185,6 @@ function Chessboard() {
     }
 
     // Creating element tags
-
-    const tileKeys = Object.keys(chessboard)
-    const tiles = tileKeys.map((tile) => {
-        let drawPiece = null;
-        const pieceDict = getPieceDict();
-        for (const pieceKey in pieceDict) {
-            const piece = pieceDict[pieceKey];
-            const pieceTile = getTileKeyFromCoordinates(piece.x, piece.y);
-            if (tile === pieceTile && piece.id != draggingPiece)  {
-                drawPiece = piece;
-                break;
-            }
-        }
-        return (
-            <ChessTile 
-                id={chessboard[tile].id}
-                key={chessboard[tile].id}
-                x={chessboard[tile].x}
-                y={chessboard[tile].y}
-                color={chessboard[tile].color}
-                border={chessboard[tile].color}
-                getCenter={chessboard[tile].getCenter}
-                drawPiece={drawPiece}
-            />
-        )
-    });
 
     const cursorFollowerElement = () => {
         if (draggingPiece) {
@@ -238,6 +222,20 @@ function Chessboard() {
         };
         return null
     };
+
+    const dict = getPieceDict();
+    const allPieces = Object.keys(dict).map((index) => {
+        const pieceData = dict[index];
+        return (
+            <ChessPiece
+                id={pieceData.id}
+                x={pieceData.x}
+                y={pieceData.y}
+                imagePath={pieceData.imagePath}
+                color={pieceData.color}
+            />
+        );
+    });
         
      
     // TODO: Probably using too many things here. Read up on hooks and see what can be better-placed.
@@ -401,6 +399,7 @@ function Chessboard() {
             {tiles}
             {cursorFollowerElement()}
             {highlightedTileElement()}
+            {allPieces}
         </div>
     );
 };

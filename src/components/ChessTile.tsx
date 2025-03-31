@@ -1,4 +1,3 @@
-import ChessPiece, { ChessPieceProps } from "./ChessPiece"
 import { Coordinate, TileColor } from "./CommonTypes";
 import "./ChessTile.css";
 
@@ -19,7 +18,6 @@ interface Props {
     color: TileColor,
     border: TileColor,
     getCenter(): Coordinate,
-    drawPiece: ChessPieceProps | null,
 };
 
 const WHITE_COLOR = "cornsilk";
@@ -33,55 +31,24 @@ function ChessTile(props: Props) {
     if (props.color === "black") {
         color = BLACK_COLOR;
     };
-
-    if (props.drawPiece) {
-        return (
-            <>
-                <div
-                    className={`absolute`}
-                    chess-tile={"true"}
-                    style={{ 
-                        left: xPx, 
-                        top: yPx, 
-                        backgroundColor: color,
-                        height: Globals.TILESIZE + "px",
-                        width: Globals.TILESIZE + "px",
-                        zIndex: Globals.Z_INDEX.BOARD,
-                        //cursor: props.drawPiece.color === PLAYER_COLOR ? "grab" : "default",
-                    }}
-                    id={props.id}
-                    key={props.id}>
-                        <ChessPiece 
-                            id={props.drawPiece.id}
-                            key={props.drawPiece.id}
-                            x={props.drawPiece.x}
-                            y={props.drawPiece.y}
-                            color={props.drawPiece.color}
-                            imagePath={props.drawPiece.imagePath}
-                        />
-                </div>
-            </>
-        );
-    } else {
-        return (
-            <>
-                <div
-                    className={`absolute`}
-                    chess-tile={"true"}
-                    style={{ 
-                        left: xPx, 
-                        top: yPx, 
-                        backgroundColor: color,
-                        height: Globals.TILESIZE + "px",
-                        width: Globals.TILESIZE + "px",
-                        border: `${Globals.TILESIZE / Globals.BORDER_FRACTION}px solid ${props.border === "white" ? "cornsilk" : "chocolate"}`
-                    }}
-                    id={props.id}
-                    key={props.id}>
-                </div>
-            </>
-        );
-    };
+    return (
+        <>
+            <div
+                className={`absolute`}
+                chess-tile={"true"}
+                style={{ 
+                    left: xPx, 
+                    top: yPx, 
+                    backgroundColor: color,
+                    height: Globals.TILESIZE + "px",
+                    width: Globals.TILESIZE + "px",
+                    border: `${Globals.TILESIZE / Globals.BORDER_FRACTION}px solid ${props.border === "white" ? "cornsilk" : "chocolate"}`
+                }}
+                id={props.id}
+                key={props.id}>
+            </div>
+        </>
+    );
 };
 
 export type { ChessTileInterface };
