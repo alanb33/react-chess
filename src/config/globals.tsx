@@ -7,6 +7,7 @@ const Globals = {
         BOARD: 0,
         HIGHLIGHT: 1,
         PIECE: 2,
+        DRAGGED_PIECE: 10,
     },
 };
 
