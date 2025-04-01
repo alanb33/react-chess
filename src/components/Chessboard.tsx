@@ -207,6 +207,7 @@ function Chessboard() {
                         src={piece.imagePath}
                         style={{
                             position: "absolute",
+                            zIndex: Globals.Z_INDEX.DRAGGED_PIECE,
                             left: mousePosition.x - Globals.TILESIZE / 2,
                             top: mousePosition.y - Globals.TILESIZE / 2,
                             width: `${Globals.TILESIZE}px`,
@@ -236,7 +237,9 @@ function Chessboard() {
         return null
     };
 
-    const allPieces = getPieceDict().map((piece) => piece.buildElement());   
+    const allPieces = getPieceDict()
+        .filter(piece => piece.id !== draggingPiece) // Don't render the piece being dragged
+        .map(piece => piece.buildElement());
      
     // TODO: Probably using too many things here. Read up on hooks and see what can be better-placed.
     useEffect(() => {
