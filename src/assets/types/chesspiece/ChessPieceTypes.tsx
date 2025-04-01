@@ -1,4 +1,5 @@
 import ChessPiece from "../../../components/ChessPiece";
+import { Coordinate } from "../../../components/CommonTypes";
 import { getTileKeyFromCoordinates } from "../../../utils/tile-utils";
 import Globals from "../../../config/globals";
 
@@ -67,43 +68,84 @@ export class Piece {
         />
     }
 
-    calculateMovement() {
+    calculateMovement(_: Piece[]): Coordinate[] {
         console.error("Invocation of base calculateMovement.");
+        return [];
     };
 }
 
+
+
 class Pawn extends Piece {
-    calculateMovement() {
+    calculateMovement(allPieces: Piece[]): Coordinate[] {
         console.log("Hello world. Pawn override.");
-    }
-}
+        const tilesToHighlight = [];
+
+        // If we're white, move downwards, and if black, move upwards.
+        const dir = this.color === "white" ? 1 : -1;
+
+        if (this.y + dir >= 0 || this.y + dir < Globals.BOARDSIZE) {
+            const dest: Coordinate = {x: this.x, y: this.y + dir};
+            let pieceAhead = false;
+            for (const piece of allPieces) {
+                if (piece.x === dest.x && piece.y === dest.y) {
+                    pieceAhead = true;
+                    break;
+                };
+
+                // Check for enemy pieces in the diagonals
+                const diagonalX = [-1, 1];
+                if (piece.y === dest.y && piece.color !== this.color) {
+                    for (const diagonal of diagonalX) {
+                        if (piece.x === dest.x + diagonal) {
+                            const enemyCoord: Coordinate = {x: dest.x - 1, y: dest.y}
+                            tilesToHighlight.push(enemyCoord);
+                        };
+                    };
+                };
+                        
+            };
+
+            if (!pieceAhead) {
+                tilesToHighlight.push(dest);
+            };
+        };
+
+        return tilesToHighlight;
+    };
+};
 
 class Rook extends Piece {
-    calculateMovement() {
+    calculateMovement(allPieces: Piece[]): Coordinate[] {
         console.log("Hello world. Rook override.");
+        return [];
     }
 }
 
 class Knight extends Piece {
-    calculateMovement() {
+    calculateMovement(allPieces: Piece[]): Coordinate[] {
         console.log("Hello world. Knight override.");
+        return [];
     }
 }
 
 class Bishop extends Piece {
-    calculateMovement() {
+    calculateMovement(allPieces: Piece[]): Coordinate[] {
         console.log("Hello world. Bishop override.");
+        return [];
     }
 }
 
 class King extends Piece {
-    calculateMovement() {
+    calculateMovement(allPieces: Piece[]): Coordinate[] {
         console.log("Hello world. King override.");
+        return [];
     }
 }
 
 class Queen extends Piece {
-    calculateMovement() {
+    calculateMovement(allPieces: Piece[]): Coordinate[] {
         console.log("Hello world. Queen override.");
+        return [];
     }
 }
