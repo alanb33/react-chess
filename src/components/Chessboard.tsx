@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-import ChessPiece, { ChessPieceProps } from "./ChessPiece";
+import { Piece } from "./ChessPiece";
 import ChessTile, { ChessTileInterface } from "./ChessTile"
 import { Coordinate, MousePos, TileColor } from "./CommonTypes";
 import HighlightedTile from "./HighlightedTile";
@@ -14,10 +14,6 @@ import "./Chessboard.css";
 interface TileGrid {
     [key: string]: ChessTileInterface;
 };
-
-interface PieceDict {
-    [key: string]: ChessPieceProps;
-}
 
 function buildChessboard(): TileGrid {
         
@@ -89,119 +85,137 @@ const tiles = tileKeys.map((tile) => {
 
 function Chessboard() {
 
-    const [pieces, setPieces] = useState<PieceDict>({});
+    const [pieces, setPieces] = useState<Array<Piece>>([]);
     const [highlightedTile, setHighlightedTile] = useState("");
     const [shiftHeld, setShiftHeld] = useState(false);
     const [draggingPiece, setDraggingPiece] = useState<string | null>(null)
     const [mousePosition, setMousePosition] = useState<MousePos>({x: 0, y: 0});
 
-    let tempPieces: PieceDict = {};
+    let tempPieces: Array<Piece> = [];
 
-    function placePieces(): PieceDict {
+    function placePieces() {
 
-        const newPieces: PieceDict = {};
+        const initialPieces = [];
 
-        const initialPieces = []
+        // 1/2/3 are rook/knight/bishop columns. 4 and 5 are queen/king.
+        // All piece placement can be determined from these first five rows.
 
-        for (let i = 0; i < Globals.BOARDSIZE; i++) {
-            const columnPieces = []
-            const columnLetter = columnTranslationKey[i];
-
-            const pawn_white = {name: "pawn", color: "white", tile: `${columnLetter}2`};
-            const pawn_black = {name: "pawn", color: "black", tile: `${columnLetter}7`};
-            columnPieces.push(pawn_white, pawn_black);
-
-            switch (columnLetter) {
-                case "A":
-                case "H": {
-                    const rook_white = {name: "rook", color: "white", tile: `${columnLetter}1`};
-                    const rook_black = {name: "rook", color: "black", tile: `${columnLetter}8`};
-                    columnPieces.push(rook_white, rook_black);
-                    break;
-                }
-                case "B":
-                case "G": {
-                    const knight_white = {name: "knight", color: "white", tile: `${columnLetter}1`};
-                    const knight_black = {name: "knight", color: "black", tile: `${columnLetter}8`};
-                    columnPieces.push(knight_white, knight_black);
-                    break;
-                }
-                case "C":
-                case "F": {
-                    const bishop_white = {name: "bishop", color: "white", tile: `${columnLetter}1`};
-                    const bishop_black = {name: "bishop", color: "black", tile: `${columnLetter}8`};
-                    columnPieces.push(bishop_white, bishop_black);
-                    break;
-                }
-                case "D": {
-                    const queen_white = {name: "queen", color: "white", tile: `${columnLetter}1`};
-                    const queen_black = {name: "queen", color: "black", tile: `${columnLetter}8`};
-                    columnPieces.push(queen_white, queen_black);
-                    break;
-                }
-                case "E": {
-                    const king_white = {name: "king", color: "white", tile: `${columnLetter}1`};
-                    const king_black = {name: "king", color: "black", tile: `${columnLetter}8`};
-                    columnPieces.push(king_white, king_black);
-                    break;
-                }
+        const row = {
+            "white": {
+                "pawn": 2,
+                "royal": 1,
+            },
+            "black": {
+                "pawn": 7,
+                "royal": 8,
             }
-
-            initialPieces.push(...columnPieces);
         };
 
-        for (const piece of initialPieces) {
-            const tile = chessboard[piece.tile];
-            const key = `${piece.name}-${piece.color[0]}-${piece.tile}`;
-            const newPiece: ChessPieceProps = {
-                id: key,
-                x: tile.x,
-                y: tile.y,
-                color: piece.color,
-                imagePath: `src/assets/images/${piece.name}-${piece.color[0]}.png`,
-                boardPosition: getTileKeyFromCoordinates(tile.x, tile.y)
+        function generateReflectedPieces(piece: string, column: number, royal: boolean, singlePiece: boolean = false): Array<Piece> {
+            const max = Globals.BOARDSIZE + 1;
+            
+            const pieces = [];
+
+            if (!singlePiece) {
+                // For reference: wl/wr/bl/br = white-left, white-right, black-left, black-right
+                const wl = new Piece(piece, "white", column, royal ? row.white.royal : row.white.pawn);
+                const wr = new Piece(piece, "white", max - column, royal ? row.white.royal : row.white.pawn);
+                const bl = new Piece(piece, "black", column, royal ? row.black.royal : row.black.pawn);
+                const br = new Piece(piece, "black", max - column, royal ? row.black.royal : row.black.pawn);
+                pieces.push(wl, wr, bl, br);
+            } else {
+                const w = new Piece(piece, "white", column, royal ? row.white.royal : row.white.pawn);
+                const b = new Piece(piece, "black", column, royal ? row.black.royal : row.black.pawn);
+                pieces.push(w, b);
             };
+            return pieces;
+        };
 
-            newPieces[newPiece.id] = newPiece;
-        }
+        // Pawn placement.
+        const pawnHalfwayPoint = 4;
+        for (let i = 1; i <= pawnHalfwayPoint; i++) {
+            const piece = "pawn"
+            const pawns = generateReflectedPieces(piece, i, false);
+            initialPieces.push(...pawns);
+        };
 
-        return newPieces;
+        // Rook/Knight/Bishop placement
+        const royalHalfwayPoint = 3;
+        for (let i = 1; i <= royalHalfwayPoint; i++) {
+            switch (i) {
+                // Rooks columns
+                case 1: {
+                    initialPieces.push(...generateReflectedPieces("rook", i, true));
+                    break;
+                };
+                // Knights columns
+                case 2: {
+                    initialPieces.push(...generateReflectedPieces("knight", i, true));
+                    break;
+                };
+                // Bishops column
+                case 3: {
+                    initialPieces.push(...generateReflectedPieces("bishop", i, true));
+                    break;
+                };
+            };
+        };
 
-    }
+        // King/Queen placement
+        const queenCol = 4;
+        const kingCol = 5;
+        initialPieces.push(...generateReflectedPieces("queen", queenCol, true, true));
+        initialPieces.push(...generateReflectedPieces("king", kingCol, true, true));
+
+        return initialPieces;
+
+    };
 
     // First renderings
 
-    if (Object.keys(pieces).length === 0) {
+    if (pieces.length === 0) {
         tempPieces = placePieces();
         setPieces(tempPieces);
-    }
+    };
 
     function getPieceDict() {
-        if (Object.keys(pieces).length === 0) {
+        if (pieces.length === 0) {
             return tempPieces;
-        }
+        };
         return pieces;
-    }
+    };
+
+    function getPieceById(pieceID: string) {
+        for (const piece of getPieceDict()) {
+            if (piece.id === pieceID) {
+                return piece;
+            };
+        };
+        return null;
+    };
 
     // Creating element tags
 
     const cursorFollowerElement = () => {
         if (draggingPiece) {
-            const piece = pieces[draggingPiece];
-            return (
-                <img
-                    id="cursorFollower"
-                    key="cursorFollower"
-                    src={piece.imagePath}
-                    style={{
-                        position: "absolute",
-                        left: mousePosition.x - Globals.TILESIZE / 2,
-                        top: mousePosition.y - Globals.TILESIZE / 2,
-                        width: `${Globals.TILESIZE}px`,
-                        height: `${Globals.TILESIZE}px`,
-                    }}
+            const piece = getPieceById(draggingPiece);
+            if (piece) {
+                return (
+                    <img
+                        id="cursorFollower"
+                        key="cursorFollower"
+                        src={piece.imagePath}
+                        style={{
+                            position: "absolute",
+                            left: mousePosition.x - Globals.TILESIZE / 2,
+                            top: mousePosition.y - Globals.TILESIZE / 2,
+                            width: `${Globals.TILESIZE}px`,
+                            height: `${Globals.TILESIZE}px`,
+                        }}
                     />
-            );
+                );
+            };
+            return null;
         };
         return null;
     };
@@ -222,22 +236,7 @@ function Chessboard() {
         return null
     };
 
-    const dict = getPieceDict();
-    const allPieces = Object.keys(dict).map((index) => {
-        const pieceData = dict[index];
-        return (
-            <ChessPiece
-                id={pieceData.id}
-                key={pieceData.id}
-                x={pieceData.x}
-                y={pieceData.y}
-                imagePath={pieceData.imagePath}
-                color={pieceData.color}
-                boardPosition={pieceData.boardPosition}
-            />
-        );
-    });
-        
+    const allPieces = getPieceDict().map((piece) => piece.buildElement());   
      
     // TODO: Probably using too many things here. Read up on hooks and see what can be better-placed.
     useEffect(() => {
@@ -313,6 +312,7 @@ function Chessboard() {
         }
 
         function handleDragStart(event: DragEvent) {
+            event.preventDefault();
             const target = event.target;
 
             if (target) {
@@ -364,8 +364,8 @@ function Chessboard() {
 
         function updateMousePosition(event: MouseEvent) {
             const newMousePos = {
-                x: event.clientX,
-                y: event.clientY,
+                x: event.pageX,
+                y: event.pageY,
             }
             setMousePosition(newMousePos);
         }
