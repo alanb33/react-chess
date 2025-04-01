@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-import { Piece } from "./ChessPiece";
+import { Piece, PieceType } from '../assets/types/chesspiece/ChessPieceTypes';
 import ChessTile, { ChessTileInterface } from "./ChessTile"
 import { Coordinate, MousePos, TileColor } from "./CommonTypes";
 import HighlightedTile from "./HighlightedTile";
@@ -111,21 +111,21 @@ function Chessboard() {
             }
         };
 
-        function generateReflectedPieces(piece: string, column: number, royal: boolean, singlePiece: boolean = false): Array<Piece> {
+        function generateReflectedPieces(piece: PieceType, column: number, royal: boolean, singlePiece: boolean = false): Array<Piece> {
             const max = Globals.BOARDSIZE + 1;
             
             const pieces = [];
 
             if (!singlePiece) {
                 // For reference: wl/wr/bl/br = white-left, white-right, black-left, black-right
-                const wl = new Piece(piece, "white", column, royal ? row.white.royal : row.white.pawn);
-                const wr = new Piece(piece, "white", max - column, royal ? row.white.royal : row.white.pawn);
-                const bl = new Piece(piece, "black", column, royal ? row.black.royal : row.black.pawn);
-                const br = new Piece(piece, "black", max - column, royal ? row.black.royal : row.black.pawn);
+                const wl = Piece.buildPiece(piece, "white", column, royal ? row.white.royal : row.white.pawn);
+                const wr = Piece.buildPiece(piece, "white", max - column, royal ? row.white.royal : row.white.pawn);
+                const bl = Piece.buildPiece(piece, "black", column, royal ? row.black.royal : row.black.pawn);
+                const br = Piece.buildPiece(piece, "black", max - column, royal ? row.black.royal : row.black.pawn);
                 pieces.push(wl, wr, bl, br);
             } else {
-                const w = new Piece(piece, "white", column, royal ? row.white.royal : row.white.pawn);
-                const b = new Piece(piece, "black", column, royal ? row.black.royal : row.black.pawn);
+                const w = Piece.buildPiece(piece, "white", column, royal ? row.white.royal : row.white.pawn);
+                const b = Piece.buildPiece(piece, "black", column, royal ? row.black.royal : row.black.pawn);
                 pieces.push(w, b);
             };
             return pieces;
@@ -134,9 +134,7 @@ function Chessboard() {
         // Pawn placement.
         const pawnHalfwayPoint = 4;
         for (let i = 1; i <= pawnHalfwayPoint; i++) {
-            const piece = "pawn"
-            const pawns = generateReflectedPieces(piece, i, false);
-            initialPieces.push(...pawns);
+            initialPieces.push(...generateReflectedPieces("pawn", i, false));
         };
 
         // Rook/Knight/Bishop placement
