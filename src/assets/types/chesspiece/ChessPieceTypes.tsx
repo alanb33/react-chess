@@ -128,6 +128,7 @@ class Rook extends Piece {
         for (let i = 1; i < Globals.BOARDSIZE; i++) {
             for (const dir of toCheck) {
                 if (checking[dir]) {
+                    console.log(`Checking ${dir}`);
                     let xMovement = 0;
                     let yMovement = 0;
 
@@ -146,26 +147,25 @@ class Rook extends Piece {
                             break;
                     }
 
-                    const coord: Coordinate = {x: this.x + xMovement, y: this.y + yMovement};
-                    if (isCoordinateValid(coord)) {
+                    const dest: Coordinate = {x: this.x + xMovement, y: this.y + yMovement};
+                    if (isCoordinateValid(dest)) {
                         for (const piece of allPieces) {
-                            if (piece.x === coord.x && piece.y == coord.y) {
+                            if (piece.x === dest.x && piece.y === dest.y) {
                                 console.log(`piece.color and this.color: ${piece.color} and ${this.color}`)
                                 if (piece.color !== this.color) {
-                                    console.log("They match, pushing!");
-                                    tilesToHighlight.push(coord);
+                                    console.log("Found enemy match");
+                                    tilesToHighlight.push(dest);
                                 }
                                 checking[dir] = false;
                                 break;
-                            } else {
-                                tilesToHighlight.push(coord);
                             }
                         }
-                    } else {
-                        checking[dir] = false
-                    };
-                    if (!checking[dir]) {
-                        continue;
+                        if (checking[dir]) {
+                            tilesToHighlight.push(dest)
+                        } else {
+                            // End this dir check
+                            continue;
+                        };
                     };
                 };
             };
