@@ -7,7 +7,7 @@ import HighlightedTile from "./HighlightedTile";
 
 import Globals from "../config/globals";
 import { isChessPiece, isTileKey } from "../utils/validators";
-import { getTileKeyFromCoordinates, getTileHighlights } from '../utils/tile-utils';
+import { getTileKeyFromCoordinates, getTileHighlights, isPieceAtTile } from '../utils/tile-utils';
 
 import "./Chessboard.css";
 
@@ -220,13 +220,14 @@ function Chessboard() {
 
     const highlightedTileElements = highlightedTiles.map((tileCoordinate) => {
         const tileKey = getTileKeyFromCoordinates(tileCoordinate.x, tileCoordinate.y);
-        if (isTileKey(tileKey)) {
+        if (isTileKey(tileKey)) { 
             const tile = chessboard[tileKey];
+            const color = isPieceAtTile(tile, pieces) ? "pink" : "lightgreen";
             return (
                 <HighlightedTile 
                     key={`highlightedTile-${tile.id}`}
                     coordinates={{x: tile.x, y: tile.y}}
-                    color="lightgreen"
+                    color={color}
                     />
             );
         };

@@ -1,5 +1,6 @@
 import { Coordinate } from "../components/CommonTypes";
 import { Piece } from "../assets/types/chesspiece/ChessPieceTypes";
+import { ChessTileInterface } from "../components/ChessTile";
 
 export type ColumnLetter = "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H"
 
@@ -29,3 +30,12 @@ export function getTileKeyFromCoordinates(x: number, y: number): string {
     return `${colLetter}${y}`;
 };
 
+// TODO: As getTileHighlights; devise a way to just pass a view of pieces.
+export function isPieceAtTile(tile: ChessTileInterface, allPieces: Piece[]): boolean {
+    for (const piece of allPieces) {
+        if (piece.x === tile.x && piece.y === tile.y) {
+            return true;
+        }
+    }
+    return false;
+}

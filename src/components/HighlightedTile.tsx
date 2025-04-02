@@ -27,6 +27,7 @@ function HighlightedTile(props: HighlightedTileInterface) {
                 height: paddingSize + "px",
                 padding: padding + "px",
                 backgroundColor: props.color,
+                borderRadius: "100%"
             }}
         />
     );
