@@ -114,64 +114,68 @@ class Pawn extends Piece {
     };
 };
 
-class Rook extends Piece {
-    calculateMovement(allPieces: Piece[]): Coordinate[] {
-        const tilesToHighlight = [];
-        const checking: {[key: string]: boolean} = {
-            "left": true,
-            "right": true,
-            "up": true,
-            "down": true
-        }
+type Dir = "n" | "ne" | "e" | "se" | "s" | "sw" | "w" | "nw";
 
-        const toCheck = ["left", "right", "up", "down"];
-        for (let i = 1; i < Globals.BOARDSIZE; i++) {
-            for (const dir of toCheck) {
-                if (checking[dir]) {
-                    console.log(`Checking ${dir}`);
-                    let xMovement = 0;
-                    let yMovement = 0;
+function getDirectionalTiles(origin: Piece, allPieces: Piece[], directions: Dir[], maxDistance = Globals.BOARDSIZE): Coordinate[] {
 
-                    switch (dir) {
-                        case "left":
-                            xMovement = -i;
-                            break;
-                        case "right":
-                            xMovement = i;
-                            break;
-                        case "up":
-                            yMovement = -i;
-                            break;
-                        case "down":
-                            yMovement = i;
-                            break;
-                    }
+    // Prepare the checking dictionary with all directions we need
+    const checking: {[key: string]: boolean} = {}
+    for (const dir of directions) {
+        checking[dir] = true;
+    }
 
-                    const dest: Coordinate = {x: this.x + xMovement, y: this.y + yMovement};
-                    if (isCoordinateValid(dest)) {
-                        for (const piece of allPieces) {
-                            if (piece.x === dest.x && piece.y === dest.y) {
-                                console.log(`piece.color and this.color: ${piece.color} and ${this.color}`)
-                                if (piece.color !== this.color) {
-                                    console.log("Found enemy match");
-                                    tilesToHighlight.push(dest);
-                                }
-                                checking[dir] = false;
-                                break;
+    const returnTiles = [];
+
+    for (let i = 1; i <= maxDistance; i++) {
+        for (const dir of directions) {
+            if (checking[dir]) {
+                let xMovement = 0;
+                let yMovement = 0;
+
+                /* 
+                    Since the Dir type is n/ne/se, etc -- this should get the
+                    proper directions from their string contents!
+                */
+                if (dir.includes("n")) {
+                    yMovement = -i;
+                } else if (dir.includes("s")) {
+                    yMovement = i;
+                }
+                if (dir.includes("w")) {
+                    xMovement = -i;
+                } else if (dir.includes("e")) {
+                    xMovement = i;
+                }
+
+                const dest: Coordinate = {x: origin.x + xMovement, y: origin.y + yMovement};
+                if (isCoordinateValid(dest)) {
+                    for (const piece of allPieces) {
+                        if (piece.x === dest.x && piece.y === dest.y) {
+                            if (piece.color !== origin.color) {
+                                returnTiles.push(dest);
                             }
+                            checking[dir] = false;
+                            break;
                         }
-                        if (checking[dir]) {
-                            tilesToHighlight.push(dest)
-                        } else {
-                            // End this dir check
-                            continue;
-                        };
+                    }
+                    if (checking[dir]) {
+                        returnTiles.push(dest)
+                    } else {
+                        // End this dir check
+                        continue;
                     };
                 };
             };
         };
+    };
 
-        return tilesToHighlight;
+    return returnTiles;
+};
+
+class Rook extends Piece {
+    calculateMovement(allPieces: Piece[]): Coordinate[] {
+        const toCheck: Dir[] = ["n", "e", "s", "w"];
+        return getDirectionalTiles(this, allPieces, toCheck);
     };
 };
 
@@ -184,21 +188,21 @@ class Knight extends Piece {
 
 class Bishop extends Piece {
     calculateMovement(allPieces: Piece[]): Coordinate[] {
-        console.log("Hello world. Bishop override.");
-        return [];
+        const toCheck: Dir[] = ["nw", "sw", "se", "ne"];
+        return getDirectionalTiles(this, allPieces, toCheck);
     }
 }
 
 class King extends Piece {
     calculateMovement(allPieces: Piece[]): Coordinate[] {
-        console.log("Hello world. King override.");
-        return [];
+        const toCheck: Dir[] = ["n", "e", "s", "w", "nw", "sw", "se", "ne"];
+        return getDirectionalTiles(this, allPieces, toCheck, 1);
     }
 }
 
 class Queen extends Piece {
     calculateMovement(allPieces: Piece[]): Coordinate[] {
-        console.log("Hello world. Queen override.");
-        return [];
+        const toCheck: Dir[] = ["n", "e", "s", "w", "nw", "sw", "se", "ne"];
+        return getDirectionalTiles(this, allPieces, toCheck);
     }
 }
