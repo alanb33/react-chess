@@ -224,7 +224,7 @@ function Chessboard() {
             const tile = chessboard[tileKey];
             return (
                 <HighlightedTile 
-                    key="highlightedTile"
+                    key={`highlightedTile-${tile.id}`}
                     coordinates={{x: tile.x, y: tile.y}}
                     color="lightgreen"
                     />
@@ -255,10 +255,38 @@ function Chessboard() {
 
         // While this sounds like it should be a DragEvent/dragend event, it's actually going to be mouseup here since
         // the page is being re-rendered and the drag state is lost
-        function handleDragEnd() {
+        function handleDragEnd(event: MouseEvent) {
             if (draggingPiece) {
                 setDraggingPiece(null)
                 setHighlightedTiles([])
+                const dropPos: Coordinate = {
+                    x: event.pageX,
+                    y: event.pageY
+                };
+                const translatedPos: Coordinate = {
+                    x: Math.floor(dropPos.x / Globals.TILESIZE), 
+                    y: Math.floor(dropPos.y / Globals.TILESIZE)
+                };
+                console.log(`Dropped at approximately ${translatedPos.x}/${translatedPos.y}`);
+
+                if (translatedPos.x > 0 && translatedPos.x <= Globals.BOARDSIZE) {
+                    if (translatedPos.y > 0 && translatedPos.y <= Globals.BOARDSIZE) {
+                        let found = null;
+                        for (const tile of highlightedTiles) {
+                            if (translatedPos.x === tile.x && translatedPos.y === tile.y) {
+                                const pieceData = pieces.filter(piece => piece.id === draggingPiece)[0];
+                                pieceData.x = translatedPos.x;
+                                pieceData.y = translatedPos.y;
+                                found = true;
+                                break;
+                            };
+                        };
+
+                        if (!found) {
+                            console.log("Tried to drop piece, but wasn't at a valid coordinate.");
+                        };   
+                    };
+                };
             };
         };
 
@@ -313,7 +341,7 @@ function Chessboard() {
             document.removeEventListener("mousemove", updateMousePosition);
         };
 
-    }, [draggingPiece, mousePosition, pieces]);
+    }, [draggingPiece, highlightedTiles, mousePosition, pieces]);
 
     const SIZECALC = `${Globals.TILESIZE * Globals.BOARDSIZE}px`;
 

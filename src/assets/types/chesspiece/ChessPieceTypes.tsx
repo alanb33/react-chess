@@ -75,35 +75,34 @@ export class Piece {
 }
 
 
-
+// TODO: There's some off-by-one error somewhere. It has to do with piece x/y and movement limitations.
 class Pawn extends Piece {
     calculateMovement(allPieces: Piece[]): Coordinate[] {
-        console.log("Hello world. Pawn override.");
         const tilesToHighlight = [];
 
         // If we're white, move downwards, and if black, move upwards.
         const dir = this.color === "white" ? 1 : -1;
 
-        if (this.y + dir >= 0 || this.y + dir < Globals.BOARDSIZE) {
+        if (this.y + dir > 0 || this.y + dir <= Globals.BOARDSIZE) {
             const dest: Coordinate = {x: this.x, y: this.y + dir};
             let pieceAhead = false;
             for (const piece of allPieces) {
                 if (piece.x === dest.x && piece.y === dest.y) {
                     pieceAhead = true;
-                    break;
                 };
 
                 // Check for enemy pieces in the diagonals
                 const diagonalX = [-1, 1];
                 if (piece.y === dest.y && piece.color !== this.color) {
                     for (const diagonal of diagonalX) {
+                        console.log(`Testing diagonal ${diagonal}`);
                         if (piece.x === dest.x + diagonal) {
-                            const enemyCoord: Coordinate = {x: dest.x - 1, y: dest.y}
+                            const enemyCoord: Coordinate = {x: dest.x + diagonal, y: dest.y}
+                            console.log(`Pushing enemy piece from ${piece.x}/${piece.y}`);
                             tilesToHighlight.push(enemyCoord);
                         };
                     };
                 };
-                        
             };
 
             if (!pieceAhead) {
