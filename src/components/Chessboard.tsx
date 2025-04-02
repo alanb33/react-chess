@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
 
-import { Piece } from "./ChessPiece";
+import { Piece, PieceType } from '../assets/types/chesspiece/ChessPieceTypes';
 import ChessTile, { ChessTileInterface } from "./ChessTile"
 import { Coordinate, MousePos, TileColor } from "./CommonTypes";
 import HighlightedTile from "./HighlightedTile";
 
 import Globals from "../config/globals";
-import { isChessPiece, isChessboardTile, isTileKey } from "../utils/validators";
-import { ColumnLetter, getTileKeyFromCoordinates, columnTranslationKey } from '../utils/tile-utils';
+import { isChessPiece, isTileKey } from "../utils/validators";
+import { getTileKeyFromCoordinates, getTileHighlights, isPieceAtTile } from '../utils/tile-utils';
 
 import "./Chessboard.css";
 
@@ -86,8 +86,7 @@ const tiles = tileKeys.map((tile) => {
 function Chessboard() {
 
     const [pieces, setPieces] = useState<Array<Piece>>([]);
-    const [highlightedTile, setHighlightedTile] = useState("");
-    const [shiftHeld, setShiftHeld] = useState(false);
+    const [highlightedTiles, setHighlightedTiles] = useState<Coordinate[]>([]);
     const [draggingPiece, setDraggingPiece] = useState<string | null>(null)
     const [mousePosition, setMousePosition] = useState<MousePos>({x: 0, y: 0});
 
@@ -111,21 +110,21 @@ function Chessboard() {
             }
         };
 
-        function generateReflectedPieces(piece: string, column: number, royal: boolean, singlePiece: boolean = false): Array<Piece> {
+        function generateReflectedPieces(piece: PieceType, column: number, royal: boolean, singlePiece: boolean = false): Array<Piece> {
             const max = Globals.BOARDSIZE + 1;
             
             const pieces = [];
 
             if (!singlePiece) {
                 // For reference: wl/wr/bl/br = white-left, white-right, black-left, black-right
-                const wl = new Piece(piece, "white", column, royal ? row.white.royal : row.white.pawn);
-                const wr = new Piece(piece, "white", max - column, royal ? row.white.royal : row.white.pawn);
-                const bl = new Piece(piece, "black", column, royal ? row.black.royal : row.black.pawn);
-                const br = new Piece(piece, "black", max - column, royal ? row.black.royal : row.black.pawn);
+                const wl = Piece.buildPiece(piece, "white", column, royal ? row.white.royal : row.white.pawn);
+                const wr = Piece.buildPiece(piece, "white", max - column, royal ? row.white.royal : row.white.pawn);
+                const bl = Piece.buildPiece(piece, "black", column, royal ? row.black.royal : row.black.pawn);
+                const br = Piece.buildPiece(piece, "black", max - column, royal ? row.black.royal : row.black.pawn);
                 pieces.push(wl, wr, bl, br);
             } else {
-                const w = new Piece(piece, "white", column, royal ? row.white.royal : row.white.pawn);
-                const b = new Piece(piece, "black", column, royal ? row.black.royal : row.black.pawn);
+                const w = Piece.buildPiece(piece, "white", column, royal ? row.white.royal : row.white.pawn);
+                const b = Piece.buildPiece(piece, "black", column, royal ? row.black.royal : row.black.pawn);
                 pieces.push(w, b);
             };
             return pieces;
@@ -134,9 +133,7 @@ function Chessboard() {
         // Pawn placement.
         const pawnHalfwayPoint = 4;
         for (let i = 1; i <= pawnHalfwayPoint; i++) {
-            const piece = "pawn"
-            const pawns = generateReflectedPieces(piece, i, false);
-            initialPieces.push(...pawns);
+            initialPieces.push(...generateReflectedPieces("pawn", i, false));
         };
 
         // Rook/Knight/Bishop placement
@@ -221,21 +218,21 @@ function Chessboard() {
         return null;
     };
 
-    const highlightedTileElement = () => {
-        if (highlightedTile !== "") {
-            if (isTileKey(highlightedTile)) {
-                const tile = chessboard[highlightedTile];
-                return (
-                    <HighlightedTile 
-                        key="highlightedTile"
-                        coordinates={{x: tile.x, y: tile.y}}
-                        color="lightgreen"
-                        />
-                );
-            };
+    const highlightedTileElements = highlightedTiles.map((tileCoordinate) => {
+        const tileKey = getTileKeyFromCoordinates(tileCoordinate.x, tileCoordinate.y);
+        if (isTileKey(tileKey)) { 
+            const tile = chessboard[tileKey];
+            const color = isPieceAtTile(tile, pieces) ? "pink" : "lightgreen";
+            return (
+                <HighlightedTile 
+                    key={`highlightedTile-${tile.id}`}
+                    coordinates={{x: tile.x, y: tile.y}}
+                    color={color}
+                    />
+            );
         };
         return null
-    };
+    });
 
     const allPieces = getPieceDict()
         .filter(piece => piece.id !== draggingPiece) // Don't render the piece being dragged
@@ -243,77 +240,6 @@ function Chessboard() {
      
     // TODO: Probably using too many things here. Read up on hooks and see what can be better-placed.
     useEffect(() => {
-        function moveTile(xMovement: number, yMovement: number) {
-            const tileLetter = highlightedTile[0];
-            const x = columnTranslationKey.indexOf(tileLetter as ColumnLetter) + 1;
-            const y = parseInt(highlightedTile[1]);
-        
-            let destX = x + xMovement;
-            let destY = y + yMovement;
-
-            console.log(`Current X/Y before movement is ${x}/${y}`);
-            // Horizontal clamping
-            if (destX < 1 || destX > Globals.BOARDSIZE) {
-                destX = destX < 1 ? 1 : Globals.BOARDSIZE;
-                console.log("Hit horizontal limit.");
-            }
-        
-            // Vertical clamping
-            if (destY < 1 || destY > Globals.BOARDSIZE) {
-                destY = destY < 1 ? 1 : Globals.BOARDSIZE;
-                console.log("Hit vertical limit.");
-            }
-    
-            const newTile = getTileKeyFromCoordinates(destX, destY);
-
-            if (newTile !== highlightedTile) {
-                setHighlightedTile(newTile);
-                console.log(`Trying to move to ${newTile}`)
-            } else {
-                console.log("No movement possible.");
-            }
-        };
-    
-        function handleKeyDown(event: KeyboardEvent) {
-            const distance = shiftHeld ? Globals.BOARDSIZE : 1;
-            switch (event.key) {
-                case "Shift":
-                    if (!shiftHeld) {
-                        setShiftHeld(true);
-                    }
-                    break;
-                case "ArrowUp":
-                    moveTile(0, -distance);
-                    break;
-                case "ArrowDown":
-                    moveTile(0, distance);
-                    break;
-                case "ArrowLeft":
-                    moveTile(-distance, 0);
-                    break;
-                case "ArrowRight":
-                    moveTile(distance, 0);
-                    break;
-            };
-        };
-
-        function handleKeyUp(event: KeyboardEvent) {
-            if (event.key === "Shift") {
-                console.log("Releasing shift");
-                setShiftHeld(false);
-            };
-        };
-
-        function handleClick(event: MouseEvent) {
-            const target = event.target;
-
-            if (target) {
-                if (isChessPiece(target)) {
-                    // nice
-                }
-            }
-        }
-
         function handleDragStart(event: DragEvent) {
             event.preventDefault();
             const target = event.target;
@@ -321,30 +247,51 @@ function Chessboard() {
             if (target) {
                 if (isChessPiece(target)) {
                     const elem = target as HTMLImageElement;
-                    setDraggingPiece(elem.getAttribute("id"));
-                } else if (isChessboardTile(target)) {
-                    if (pieces) {
-                        for (const pieceIndex in pieces) {
-                            const piece = pieces[pieceIndex];
-                            const targetElem = target as HTMLDivElement;
-                            if (getTileKeyFromCoordinates(piece.x, piece.y) === targetElem.id) {
-                                setDraggingPiece(piece.id);
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-        }
+                    const pieceID = elem.getAttribute("id");
+                    setDraggingPiece(pieceID);
+                    setHighlightedTiles(getTileHighlights(pieceID!, pieces));
+                };
+            };
+        };
 
         // While this sounds like it should be a DragEvent/dragend event, it's actually going to be mouseup here since
         // the page is being re-rendered and the drag state is lost
         function handleDragEnd(event: MouseEvent) {
             if (draggingPiece) {
                 setDraggingPiece(null)
-            }
-        }
+                setHighlightedTiles([])
+                const dropPos: Coordinate = {
+                    x: event.pageX,
+                    y: event.pageY
+                };
+                const translatedPos: Coordinate = {
+                    x: Math.floor(dropPos.x / Globals.TILESIZE), 
+                    y: Math.floor(dropPos.y / Globals.TILESIZE)
+                };
+                console.log(`Dropped at approximately ${translatedPos.x}/${translatedPos.y}`);
 
+                if (translatedPos.x > 0 && translatedPos.x <= Globals.BOARDSIZE) {
+                    if (translatedPos.y > 0 && translatedPos.y <= Globals.BOARDSIZE) {
+                        let found = null;
+                        for (const tile of highlightedTiles) {
+                            if (translatedPos.x === tile.x && translatedPos.y === tile.y) {
+                                const pieceData = pieces.filter(piece => piece.id === draggingPiece)[0];
+                                pieceData.x = translatedPos.x;
+                                pieceData.y = translatedPos.y;
+                                found = true;
+                                break;
+                            };
+                        };
+
+                        if (!found) {
+                            console.log("Tried to drop piece, but wasn't at a valid coordinate.");
+                        };   
+                    };
+                };
+            };
+        };
+
+        /* TODO: Do something else to specify a highlight, like making the piece larger
         function handleHover(event: MouseEvent) {
             if (event.target) {
                 const target = event.target as HTMLElement
@@ -364,6 +311,7 @@ function Chessboard() {
                 }
             }
         }
+        */
 
         function updateMousePosition(event: MouseEvent) {
             const newMousePos = {
@@ -373,10 +321,10 @@ function Chessboard() {
             setMousePosition(newMousePos);
         }
 
-        document.addEventListener("keydown", handleKeyDown);
-        document.addEventListener("keyup", handleKeyUp);
-        document.addEventListener("mousedown", handleClick);
-        document.addEventListener("mouseover", handleHover);
+        //document.addEventListener("keydown", handleKeyDown);
+        //document.addEventListener("keyup", handleKeyUp);
+        //document.addEventListener("mousedown", handleClick);
+        //document.addEventListener("mouseover", handleHover);
 
         // Handling of piece clicking and dragging
         document.addEventListener("dragstart", handleDragStart);
@@ -385,16 +333,16 @@ function Chessboard() {
 
         // Cleanup function, so it doesn't add the event listeners repeatedly
         return () => {
-            document.removeEventListener("keydown", handleKeyDown);
-            document.removeEventListener("keyup", handleKeyUp);
-            document.removeEventListener("mousedown", handleClick);
-            document.removeEventListener("mouseover", handleHover);
+            //document.removeEventListener("keydown", handleKeyDown);
+            //document.removeEventListener("keyup", handleKeyUp);
+            //document.removeEventListener("mousedown", handleClick);
+            //document.removeEventListener("mouseover", handleHover);
             document.removeEventListener("dragstart", handleDragStart);
             document.removeEventListener("mouseup", handleDragEnd);
             document.removeEventListener("mousemove", updateMousePosition);
         };
 
-    }, [draggingPiece, mousePosition, highlightedTile, shiftHeld, pieces]);
+    }, [draggingPiece, highlightedTiles, mousePosition, pieces]);
 
     const SIZECALC = `${Globals.TILESIZE * Globals.BOARDSIZE}px`;
 
@@ -406,7 +354,7 @@ function Chessboard() {
             style={{ width: SIZECALC, height: SIZECALC }}>
             {tiles}
             {cursorFollowerElement()}
-            {highlightedTileElement()}
+            {highlightedTileElements}
             {allPieces}
         </div>
     );
