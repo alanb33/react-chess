@@ -1,6 +1,6 @@
 import ChessPiece from "../../../components/ChessPiece";
 import { Coordinate } from "../../../components/CommonTypes";
-import { getTileKeyFromCoordinates } from "../../../utils/tile-utils";
+import { getTileKeyFromCoordinates, isCoordinateValid } from "../../../utils/tile-utils";
 import Globals from "../../../config/globals";
 
 export type PieceType = "pawn" | "rook" | "knight" | "bishop" | "king" | "queen";
@@ -116,10 +116,64 @@ class Pawn extends Piece {
 
 class Rook extends Piece {
     calculateMovement(allPieces: Piece[]): Coordinate[] {
-        console.log("Hello world. Rook override.");
-        return [];
-    }
-}
+        const tilesToHighlight = [];
+        const checking: {[key: string]: boolean} = {
+            "left": true,
+            "right": true,
+            "up": true,
+            "down": true
+        }
+
+        const toCheck = ["left", "right", "up", "down"];
+        for (let i = 1; i < Globals.BOARDSIZE; i++) {
+            for (const dir of toCheck) {
+                if (checking[dir]) {
+                    let xMovement = 0;
+                    let yMovement = 0;
+
+                    switch (dir) {
+                        case "left":
+                            xMovement = -i;
+                            break;
+                        case "right":
+                            xMovement = i;
+                            break;
+                        case "up":
+                            yMovement = -i;
+                            break;
+                        case "down":
+                            yMovement = i;
+                            break;
+                    }
+
+                    const coord: Coordinate = {x: this.x + xMovement, y: this.y + yMovement};
+                    if (isCoordinateValid(coord)) {
+                        for (const piece of allPieces) {
+                            if (piece.x === coord.x && piece.y == coord.y) {
+                                console.log(`piece.color and this.color: ${piece.color} and ${this.color}`)
+                                if (piece.color !== this.color) {
+                                    console.log("They match, pushing!");
+                                    tilesToHighlight.push(coord);
+                                }
+                                checking[dir] = false;
+                                break;
+                            } else {
+                                tilesToHighlight.push(coord);
+                            }
+                        }
+                    } else {
+                        checking[dir] = false
+                    };
+                    if (!checking[dir]) {
+                        continue;
+                    };
+                };
+            };
+        };
+
+        return tilesToHighlight;
+    };
+};
 
 class Knight extends Piece {
     calculateMovement(allPieces: Piece[]): Coordinate[] {
