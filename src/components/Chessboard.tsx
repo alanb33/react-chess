@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-import { Piece, PieceType } from '../assets/types/chesspiece/ChessPieceTypes';
+import { Piece, PieceBuilder, PieceType } from '../assets/types/chesspiece/ChessPieceTypes';
 import ChessTile, { ChessTileInterface } from "./ChessTile"
 import { Coordinate, MousePos, TileColor } from "./CommonTypes";
 import HighlightedTile from "./HighlightedTile";
@@ -117,14 +117,14 @@ function Chessboard() {
 
             if (!singlePiece) {
                 // For reference: wl/wr/bl/br = white-left, white-right, black-left, black-right
-                const wl = Piece.buildPiece(piece, "white", column, royal ? row.white.royal : row.white.pawn);
-                const wr = Piece.buildPiece(piece, "white", max - column, royal ? row.white.royal : row.white.pawn);
-                const bl = Piece.buildPiece(piece, "black", column, royal ? row.black.royal : row.black.pawn);
-                const br = Piece.buildPiece(piece, "black", max - column, royal ? row.black.royal : row.black.pawn);
+                const wl = PieceBuilder.buildPiece(piece, "white", column, royal ? row.white.royal : row.white.pawn);
+                const wr = PieceBuilder.buildPiece(piece, "white", max - column, royal ? row.white.royal : row.white.pawn);
+                const bl = PieceBuilder.buildPiece(piece, "black", column, royal ? row.black.royal : row.black.pawn);
+                const br = PieceBuilder.buildPiece(piece, "black", max - column, royal ? row.black.royal : row.black.pawn);
                 pieces.push(wl, wr, bl, br);
             } else {
-                const w = Piece.buildPiece(piece, "white", column, royal ? row.white.royal : row.white.pawn);
-                const b = Piece.buildPiece(piece, "black", column, royal ? row.black.royal : row.black.pawn);
+                const w = PieceBuilder.buildPiece(piece, "white", column, royal ? row.white.royal : row.white.pawn);
+                const b = PieceBuilder.buildPiece(piece, "black", column, royal ? row.black.royal : row.black.pawn);
                 pieces.push(w, b);
             };
             return pieces;

@@ -82,14 +82,7 @@ function generatePieceID(name: PieceType, color: string): string {
     return `${key}-${pieceDict[key]}`;
 }
 
-export class Piece {
-    name: PieceType;
-    color: string;
-    x: number;
-    y: number;
-    id: string;
-    imagePath: string;
-
+export class PieceBuilder {
     static buildPiece (name: PieceType, color: string, x: number, y: number) {
         const params: [PieceType, string, number, number] = [name, color, x, y];
         switch (name) {
@@ -101,6 +94,15 @@ export class Piece {
             case "queen": return new Queen(...params); 
         };
     };
+};
+
+export class Piece {
+    name: PieceType;
+    color: string;
+    x: number;
+    y: number;
+    id: string;
+    imagePath: string;
 
     constructor (name: PieceType, color: string, x: number, y: number) {
         this.name = name;
@@ -128,15 +130,14 @@ export class Piece {
             imagePath={this.imagePath}
             boardPosition={getTileKeyFromCoordinates(this.x, this.y)}
         />
-    }
-
-    calculateMovement(_: Piece[]): Coordinate[] {
-        console.error("Invocation of base calculateMovement.");
-        return [];
     };
-}
+};
 
-class Pawn extends Piece {
+interface IMovablePiece {
+    calculateMovement(allpieces: Piece[]): Coordinate[];
+};
+
+class Pawn extends Piece implements IMovablePiece {
     calculateMovement(allPieces: Piece[]): Coordinate[] {
         const tilesToHighlight = [];
 
@@ -174,14 +175,14 @@ class Pawn extends Piece {
     };
 };
 
-class Rook extends Piece {
+class Rook extends Piece implements IMovablePiece {
     calculateMovement(allPieces: Piece[]): Coordinate[] {
         const toCheck: Dir[] = ["n", "e", "s", "w"];
         return getDirectionalTiles(this, allPieces, toCheck);
     };
 };
 
-class Knight extends Piece {
+class Knight extends Piece implements IMovablePiece {
     calculateMovement(allPieces: Piece[]): Coordinate[] {
 
         /*
@@ -301,21 +302,21 @@ class Knight extends Piece {
     };
 };
 
-class Bishop extends Piece {
+class Bishop extends Piece implements IMovablePiece {
     calculateMovement(allPieces: Piece[]): Coordinate[] {
         const toCheck: Dir[] = ["nw", "sw", "se", "ne"];
         return getDirectionalTiles(this, allPieces, toCheck);
     }
 }
 
-class King extends Piece {
+class King extends Piece implements IMovablePiece {
     calculateMovement(allPieces: Piece[]): Coordinate[] {
         const toCheck: Dir[] = ["n", "e", "s", "w", "nw", "sw", "se", "ne"];
         return getDirectionalTiles(this, allPieces, toCheck, 1);
     }
 }
 
-class Queen extends Piece {
+class Queen extends Piece implements IMovablePiece {
     calculateMovement(allPieces: Piece[]): Coordinate[] {
         const toCheck: Dir[] = ["n", "e", "s", "w", "nw", "sw", "se", "ne"];
         return getDirectionalTiles(this, allPieces, toCheck);
