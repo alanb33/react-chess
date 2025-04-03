@@ -42,7 +42,7 @@ export function isCoordinateValid(coord: Coordinate): boolean {
 }
 
 // TODO: As getTileHighlights; devise a way to just pass a view of pieces.
-export function isPieceAtTile(tile: ChessTileInterface, allPieces: Piece[]): boolean {
+export function isPieceAtTile(tile: ChessTileInterface, allPieces: PieceView[]): boolean {
     for (const piece of allPieces) {
         if (piece.x === tile.x && piece.y === tile.y) {
             return true;
@@ -60,7 +60,7 @@ export function getPieceAtCoordinate(coordinate: Coordinate, allPieces: Piece[])
     return null;
 }
 
-export function isPieceAtCoordinate(coordinate: Coordinate, allPieces: Piece[]): boolean {
+export function isPieceAtCoordinate(coordinate: Coordinate, allPieces: PieceView[]): boolean {
     for (const piece of allPieces) {
         if (piece.x === coordinate.x && piece.y === coordinate.y) {
             return true;
