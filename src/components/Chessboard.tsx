@@ -8,6 +8,7 @@ import HighlightedTile from "./HighlightedTile";
 import Globals from "../config/globals";
 import { isChessPiece, isTileKey } from "../utils/validators";
 import { getTileKeyFromCoordinates, getTileHighlights, isPieceAtTile } from '../utils/tile-utils';
+import { buildPieceView } from '../utils/piece-utils';
 
 import "./Chessboard.css";
 
@@ -248,8 +249,14 @@ function Chessboard() {
                 if (isChessPiece(target)) {
                     const elem = target as HTMLImageElement;
                     const pieceID = elem.getAttribute("id");
-                    setDraggingPiece(pieceID);
-                    setHighlightedTiles(getTileHighlights(pieceID!, pieces));
+                    if (pieceID) {
+                        setDraggingPiece(pieceID);
+                        const allPieceView = buildPieceView(pieces);
+                        const targetPiece = getPieceById(pieceID);
+                        if (targetPiece) {
+                            setHighlightedTiles(getTileHighlights(targetPiece, allPieceView));
+                        }
+                    }
                 };
             };
         };
@@ -268,7 +275,6 @@ function Chessboard() {
                     x: Math.floor(dropPos.x / Globals.TILESIZE), 
                     y: Math.floor(dropPos.y / Globals.TILESIZE)
                 };
-                console.log(`Dropped at approximately ${translatedPos.x}/${translatedPos.y}`);
 
                 if (translatedPos.x > 0 && translatedPos.x <= Globals.BOARDSIZE) {
                     if (translatedPos.y > 0 && translatedPos.y <= Globals.BOARDSIZE) {

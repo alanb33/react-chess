@@ -2,6 +2,7 @@ import { Coordinate } from "../components/CommonTypes";
 import { Piece } from "../assets/types/chesspiece/ChessPieceTypes";
 import { ChessTileInterface } from "../components/ChessTile";
 import Globals from "../config/globals";
+import { PieceView } from "./piece-utils";
 
 export type ColumnLetter = "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H"
 
@@ -16,11 +17,11 @@ export const columnTranslationKey: Array<ColumnLetter> = [
     "H"
 ];
 
-export function getTileHighlights(draggingPieceID: string, allPieces: Piece[]): Coordinate[] {
+export function getTileHighlights(draggingPiece: Piece, allPieces: PieceView[]): Coordinate[] {
     for (const piece of allPieces) {
-        if (piece.id === draggingPieceID) {
+        if (piece.id === draggingPiece.id) {
             // TODO: Don't pass all the actual objects; pass a reduced version with coordinates to parse on its return
-            return piece.calculateMovement(allPieces);
+            return draggingPiece.calculateMovement(allPieces);
         }
     };
     return [];

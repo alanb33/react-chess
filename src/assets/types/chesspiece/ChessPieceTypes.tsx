@@ -1,6 +1,7 @@
 import ChessPiece from "../../../components/ChessPiece";
 import { Coordinate } from "../../../components/CommonTypes";
 import { getPieceAtCoordinate, getTileKeyFromCoordinates, isCoordinateValid, isPieceAtCoordinate } from "../../../utils/tile-utils";
+import { PieceView } from "../../../utils/piece-utils";
 import Globals from "../../../config/globals";
 
 export type PieceType = "pawn" | "rook" | "knight" | "bishop" | "king" | "queen";
@@ -132,7 +133,7 @@ export abstract class Piece {
         />
     };
 
-    abstract calculateMovement(allpieces: Piece[]): Coordinate[];
+    abstract calculateMovement(allpieces: PieceView[]): Coordinate[];
 };
 
 class Pawn extends Piece {
