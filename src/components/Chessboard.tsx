@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import { Piece, PieceBuilder, PieceType } from '../assets/types/chesspiece/ChessPieceTypes';
 import ChessTile, { ChessTileInterface } from "./ChessTile"
@@ -84,14 +84,14 @@ const tiles = tileKeys.map((tile) => {
     )
 });
 
+let tempPieces: Array<Piece> = [];
+
 function Chessboard() {
 
     const [pieces, setPieces] = useState<Array<Piece>>([]);
     const [highlightedTiles, setHighlightedTiles] = useState<Coordinate[]>([]);
     const [draggingPiece, setDraggingPiece] = useState<string | null>(null)
     const [mousePosition, setMousePosition] = useState<MousePos>({x: 0, y: 0});
-
-    let tempPieces: Array<Piece> = [];
 
     function placePieces() {
 
@@ -176,24 +176,23 @@ function Chessboard() {
         setPieces(tempPieces);
     };
 
-    function getPieceDict() {
+    const getPieceDict = useCallback(() => {
         if (pieces.length === 0) {
             return tempPieces;
         };
         return pieces;
-    };
+    }, [pieces]);
 
-    function getPieceById(pieceID: string) {
+    const getPieceById = useCallback((pieceID: string) => {
         for (const piece of getPieceDict()) {
             if (piece.id === pieceID) {
                 return piece;
             };
         };
         return null;
-    };
+    }, [getPieceDict]);
 
     // Creating element tags
-
     const cursorFollowerElement = () => {
         if (draggingPiece) {
             const piece = getPieceById(draggingPiece);
@@ -252,11 +251,11 @@ function Chessboard() {
                     if (pieceID) {
                         setDraggingPiece(pieceID);
                         const allPieceView = buildPieceView(pieces);
-                        const targetPiece = getPieceById(pieceID);
-                        if (targetPiece) {
-                            setHighlightedTiles(getTileHighlights(targetPiece, allPieceView));
+                        const piece = getPieceById(pieceID)
+                        if (piece) {
+                            setHighlightedTiles(getTileHighlights(piece, allPieceView));
                         }
-                    }
+                    };
                 };
             };
         };
@@ -348,7 +347,7 @@ function Chessboard() {
             document.removeEventListener("mousemove", updateMousePosition);
         };
 
-    }, [draggingPiece, highlightedTiles, mousePosition, pieces]);
+    }, [draggingPiece, highlightedTiles, mousePosition, pieces, getPieceById]);
 
     const SIZECALC = `${Globals.TILESIZE * Globals.BOARDSIZE}px`;
 

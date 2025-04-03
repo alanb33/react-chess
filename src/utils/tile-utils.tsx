@@ -17,11 +17,11 @@ export const columnTranslationKey: Array<ColumnLetter> = [
     "H"
 ];
 
-export function getTileHighlights(draggingPiece: Piece, allPieces: PieceView[]): Coordinate[] {
+export function getTileHighlights(targetPiece: Piece, allPieces: PieceView[]): Coordinate[] {
     for (const piece of allPieces) {
-        if (piece.id === draggingPiece.id) {
+        if (piece.id === targetPiece.id) {
             // TODO: Don't pass all the actual objects; pass a reduced version with coordinates to parse on its return
-            return draggingPiece.calculateMovement(allPieces);
+            return targetPiece.calculateMovement(allPieces);
         }
     };
     return [];
