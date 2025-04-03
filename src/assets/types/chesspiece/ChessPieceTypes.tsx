@@ -96,7 +96,7 @@ export class PieceBuilder {
     };
 };
 
-export class Piece {
+export abstract class Piece {
     name: PieceType;
     color: string;
     x: number;
@@ -131,13 +131,11 @@ export class Piece {
             boardPosition={getTileKeyFromCoordinates(this.x, this.y)}
         />
     };
+
+    abstract calculateMovement(allpieces: Piece[]): Coordinate[];
 };
 
-interface IMovablePiece {
-    calculateMovement(allpieces: Piece[]): Coordinate[];
-};
-
-class Pawn extends Piece implements IMovablePiece {
+class Pawn extends Piece {
     calculateMovement(allPieces: Piece[]): Coordinate[] {
         const tilesToHighlight = [];
 
@@ -175,14 +173,14 @@ class Pawn extends Piece implements IMovablePiece {
     };
 };
 
-class Rook extends Piece implements IMovablePiece {
+class Rook extends Piece {
     calculateMovement(allPieces: Piece[]): Coordinate[] {
         const toCheck: Dir[] = ["n", "e", "s", "w"];
         return getDirectionalTiles(this, allPieces, toCheck);
     };
 };
 
-class Knight extends Piece implements IMovablePiece {
+class Knight extends Piece {
     calculateMovement(allPieces: Piece[]): Coordinate[] {
 
         /*
@@ -302,21 +300,21 @@ class Knight extends Piece implements IMovablePiece {
     };
 };
 
-class Bishop extends Piece implements IMovablePiece {
+class Bishop extends Piece {
     calculateMovement(allPieces: Piece[]): Coordinate[] {
         const toCheck: Dir[] = ["nw", "sw", "se", "ne"];
         return getDirectionalTiles(this, allPieces, toCheck);
     }
 }
 
-class King extends Piece implements IMovablePiece {
+class King extends Piece {
     calculateMovement(allPieces: Piece[]): Coordinate[] {
         const toCheck: Dir[] = ["n", "e", "s", "w", "nw", "sw", "se", "ne"];
         return getDirectionalTiles(this, allPieces, toCheck, 1);
     }
 }
 
-class Queen extends Piece implements IMovablePiece {
+class Queen extends Piece {
     calculateMovement(allPieces: Piece[]): Coordinate[] {
         const toCheck: Dir[] = ["n", "e", "s", "w", "nw", "sw", "se", "ne"];
         return getDirectionalTiles(this, allPieces, toCheck);
