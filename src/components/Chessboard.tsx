@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 
-import { Piece, PieceBuilder, PieceType } from '../assets/types/chesspiece/ChessPieceTypes';
+import { Piece, PieceBuilder, PieceType, SpecialMovablePiece } from '../assets/types/chesspiece/ChessPieceTypes';
 import ChessTile, { ChessTileInterface } from "./ChessTile"
 import { Coordinate, MousePos, TileColor } from "./CommonTypes";
 import HighlightedTile from "./HighlightedTile";
 
 import Globals from "../config/globals";
 import { isChessPiece, isTileKey } from "../utils/validators";
-import { getTileKeyFromCoordinates, getTileHighlights, isPieceAtTile } from '../utils/tile-utils';
+import { getTileKeyFromCoordinates, isPieceAtTile } from '../utils/tile-utils';
 import { buildPieceView } from '../utils/piece-utils';
 
 import "./Chessboard.css";
@@ -253,7 +253,27 @@ function Chessboard() {
                         const allPieceView = buildPieceView(pieces);
                         const piece = getPieceById(pieceID)
                         if (piece) {
-                            setHighlightedTiles(getTileHighlights(piece, allPieceView));
+                            const highlights = [...piece.calculateMovement(allPieceView)];
+                            for (const highlight of highlights) {
+                                console.log(`Highlight: ${highlight.x}/${highlight.y}`);
+                            }
+                            if (piece instanceof SpecialMovablePiece) {
+                                console.log("Calculating special moves...");
+                                const specialMoves = (piece as SpecialMovablePiece).calculateSpecialMovement(allPieceView);
+                                for (const move of specialMoves) {
+                                    let found = false;
+                                    for (const highlight of highlights) {
+                                        if (move.x === highlight.x && move.y === highlight.y) {
+                                            found = true;
+                                            break;
+                                        }
+                                    }
+                                    if (!found) {
+                                        highlights.push(move);
+                                    }
+                                };
+                            }
+                            setHighlightedTiles(highlights);
                         }
                     };
                 };
@@ -264,6 +284,11 @@ function Chessboard() {
         // the page is being re-rendered and the drag state is lost
         function handleDragEnd(event: MouseEvent) {
             if (draggingPiece) {
+                const piece = getPieceById(draggingPiece);
+                if (piece && piece instanceof SpecialMovablePiece) {
+                    piece.hasMoved = true;
+                }
+                
                 setDraggingPiece(null)
                 setHighlightedTiles([])
                 const dropPos: Coordinate = {

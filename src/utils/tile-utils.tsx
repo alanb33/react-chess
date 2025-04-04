@@ -51,7 +51,7 @@ export function isPieceAtTile(tile: ChessTileInterface, allPieces: PieceView[]):
     return false;
 }
 
-export function getPieceAtCoordinate(coordinate: Coordinate, allPieces: Piece[]): Piece | null {
+export function getPieceAtCoordinate(coordinate: Coordinate, allPieces: PieceView[]): PieceView | null {
     for (const piece of allPieces) {
         if (piece.x === coordinate.x && piece.y === coordinate.y) {
             return piece;

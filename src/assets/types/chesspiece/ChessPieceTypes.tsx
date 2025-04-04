@@ -10,7 +10,7 @@ const pieceDict: {[key: string]: number} = {};
 
 type Dir = "n" | "ne" | "e" | "se" | "s" | "sw" | "w" | "nw";
 
-function getDirectionalTiles(origin: Piece, allPieces: Piece[], directions: Dir[], maxDistance = Globals.BOARDSIZE): Coordinate[] {
+function getDirectionalTiles(origin: Piece, allPieces: PieceView[], directions: Dir[], maxDistance = Globals.BOARDSIZE): Coordinate[] {
 
     // Prepare the checking dictionary with all directions we need
     const checking: {[key: string]: boolean} = {}
@@ -136,8 +136,19 @@ export abstract class Piece {
     abstract calculateMovement(allpieces: PieceView[]): Coordinate[];
 };
 
-class Pawn extends Piece {
-    calculateMovement(allPieces: Piece[]): Coordinate[] {
+export abstract class SpecialMovablePiece extends Piece {
+    hasMoved: boolean;
+
+    constructor (name: PieceType, color: string, x: number, y: number) {
+        super(name, color, x, y);
+        this.hasMoved = false;
+    };
+
+    abstract calculateSpecialMovement(allPieces: PieceView[]): Coordinate[];
+}
+
+class Pawn extends SpecialMovablePiece {
+    calculateMovement(allPieces: PieceView[]): Coordinate[] {
         const tilesToHighlight = [];
 
         // If we're white, move downwards, and if black, move upwards.
@@ -172,17 +183,58 @@ class Pawn extends Piece {
 
         return tilesToHighlight;
     };
+
+    calculateSpecialMovement(allPieces: PieceView[]): Coordinate[] {
+        const highlights: Coordinate[] = [];
+        highlights.push(...this.calculateFirstTurnAdvancement(allPieces));
+        return highlights;
+    }
+
+    calculateFirstTurnAdvancement(allPieces: PieceView[]): Coordinate[] {
+        const highlights: Coordinate[] = [];
+
+        if (!this.hasMoved) {
+            // If we're white, move downwards, and if black, move upwards.
+            const dir = this.color === "white" ? 1 : -1;
+            const steps = 2;
+
+            let destBlocked = false;
+            for (let step = 1; step <= steps; step++) {
+                if (destBlocked) {
+                    break;
+                };
+
+                const dest: Coordinate = {x: this.x, y: this.y + (dir * step)};
+                if (isCoordinateValid(dest)) {
+                    for (const piece of allPieces) {
+                        if (piece.x === dest.x && piece.y === dest.y) {
+                            console.log("The destination is blocked by another piece.");
+                            destBlocked = true;
+                            break;
+                        };
+                    };
+                    if (!destBlocked) {
+                        highlights.push(dest);
+                    }
+                } else {
+                    break;
+                };
+            };
+        };
+
+        return highlights;
+    }
 };
 
 class Rook extends Piece {
-    calculateMovement(allPieces: Piece[]): Coordinate[] {
+    calculateMovement(allPieces: PieceView[]): Coordinate[] {
         const toCheck: Dir[] = ["n", "e", "s", "w"];
         return getDirectionalTiles(this, allPieces, toCheck);
     };
 };
 
 class Knight extends Piece {
-    calculateMovement(allPieces: Piece[]): Coordinate[] {
+    calculateMovement(allPieces: PieceView[]): Coordinate[] {
 
         /*
             The knight moves in an unusual L-shaped pattern.
@@ -302,21 +354,25 @@ class Knight extends Piece {
 };
 
 class Bishop extends Piece {
-    calculateMovement(allPieces: Piece[]): Coordinate[] {
+    calculateMovement(allPieces: PieceView[]): Coordinate[] {
         const toCheck: Dir[] = ["nw", "sw", "se", "ne"];
         return getDirectionalTiles(this, allPieces, toCheck);
     }
 }
 
-class King extends Piece {
-    calculateMovement(allPieces: Piece[]): Coordinate[] {
+class King extends SpecialMovablePiece {
+    calculateMovement(allPieces: PieceView[]): Coordinate[] {
         const toCheck: Dir[] = ["n", "e", "s", "w", "nw", "sw", "se", "ne"];
         return getDirectionalTiles(this, allPieces, toCheck, 1);
+    }
+
+    calculateSpecialMovement(allPieces: PieceView[]): Coordinate[] {
+        return [];
     }
 }
 
 class Queen extends Piece {
-    calculateMovement(allPieces: Piece[]): Coordinate[] {
+    calculateMovement(allPieces: PieceView[]): Coordinate[] {
         const toCheck: Dir[] = ["n", "e", "s", "w", "nw", "sw", "se", "ne"];
         return getDirectionalTiles(this, allPieces, toCheck);
     }

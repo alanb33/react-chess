@@ -1,5 +1,6 @@
 import { Piece } from "../assets/types/chesspiece/ChessPieceTypes";
 
+// Reduced view of a Piece for passing less information around
 export interface PieceView {
     id: string;
     x: number;
