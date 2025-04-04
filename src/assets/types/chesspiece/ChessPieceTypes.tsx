@@ -121,6 +121,8 @@ export abstract class Piece {
         }
     };
 
+    getCoordinate(): Coordinate { return {x: this.x, y: this.y} };
+
     buildElement() {
         return <ChessPiece
             id={this.id}
@@ -134,6 +136,18 @@ export abstract class Piece {
     };
 
     abstract calculateMovement(allpieces: PieceView[]): Coordinate[];
+
+    moveTo(dest: Coordinate) {
+        this.x = dest.x;
+        this.y = dest.y;
+    };
+
+    wouldCapture(other: PieceView) {
+        if (this.x === other.x && this.y === other.y) {
+            return true;
+        }
+        return false;
+    }
 };
 
 export abstract class SpecialMovablePiece extends Piece {

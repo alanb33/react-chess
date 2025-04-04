@@ -8,6 +8,10 @@ export interface PieceView {
     color: string;
 }
 
+export function getPieceTypeFromId(pieceID: string): string {
+    return pieceID.split("-")[0];
+}
+
 export function buildPieceView(allPieces: Piece[]): PieceView[] {
     const pieceViewArray = []
     for (const piece of allPieces) {
@@ -20,4 +24,8 @@ export function buildPieceView(allPieces: Piece[]): PieceView[] {
         pieceViewArray.push(pieceView)
     }
     return pieceViewArray;
+}
+
+export function capturePiece(piece: PieceView, allPieces: Piece[]): Piece[] {
+    return allPieces.filter(existingPiece => existingPiece.id !== piece.id);
 }

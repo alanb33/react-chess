@@ -4,11 +4,12 @@ import { Piece, PieceBuilder, PieceType, SpecialMovablePiece } from '../assets/t
 import ChessTile, { ChessTileInterface } from "./ChessTile"
 import { Coordinate, MousePos, TileColor } from "./CommonTypes";
 import HighlightedTile from "./HighlightedTile";
+import MoveLog from "./MoveLog";
 
 import Globals from "../config/globals";
 import { isChessPiece, isTileKey } from "../utils/validators";
-import { getTileKeyFromCoordinates, isPieceAtTile } from '../utils/tile-utils';
-import { buildPieceView } from '../utils/piece-utils';
+import { getPieceAtCoordinate, getTileKeyFromCoordinates, isPieceAtTile } from '../utils/tile-utils';
+import { buildPieceView, capturePiece } from '../utils/piece-utils';
 
 import "./Chessboard.css";
 
@@ -85,6 +86,7 @@ const tiles = tileKeys.map((tile) => {
 });
 
 let tempPieces: Array<Piece> = [];
+const moveLog = new MoveLog();
 
 function Chessboard() {
 
@@ -285,37 +287,46 @@ function Chessboard() {
         function handleDragEnd(event: MouseEvent) {
             if (draggingPiece) {
                 const piece = getPieceById(draggingPiece);
-                if (piece && piece instanceof SpecialMovablePiece) {
-                    piece.hasMoved = true;
-                }
                 
-                setDraggingPiece(null)
-                setHighlightedTiles([])
-                const dropPos: Coordinate = {
-                    x: event.pageX,
-                    y: event.pageY
-                };
-                const translatedPos: Coordinate = {
-                    x: Math.floor(dropPos.x / Globals.TILESIZE), 
-                    y: Math.floor(dropPos.y / Globals.TILESIZE)
-                };
+                if (piece) {
+                    setDraggingPiece(null)
+                    setHighlightedTiles([])
+                    const dropPos: Coordinate = {
+                        x: event.pageX,
+                        y: event.pageY
+                    };
+                    const translatedPos: Coordinate = {
+                        x: Math.floor(dropPos.x / Globals.TILESIZE), 
+                        y: Math.floor(dropPos.y / Globals.TILESIZE)
+                    };
 
-                if (translatedPos.x > 0 && translatedPos.x <= Globals.BOARDSIZE) {
-                    if (translatedPos.y > 0 && translatedPos.y <= Globals.BOARDSIZE) {
-                        let found = null;
-                        for (const tile of highlightedTiles) {
-                            if (translatedPos.x === tile.x && translatedPos.y === tile.y) {
-                                const pieceData = pieces.filter(piece => piece.id === draggingPiece)[0];
-                                pieceData.x = translatedPos.x;
-                                pieceData.y = translatedPos.y;
-                                found = true;
-                                break;
+                    if (translatedPos.x > 0 && translatedPos.x <= Globals.BOARDSIZE) {
+                        if (translatedPos.y > 0 && translatedPos.y <= Globals.BOARDSIZE) {
+                            let found = null;
+                            for (const tile of highlightedTiles) {
+                                if (translatedPos.x === tile.x && translatedPos.y === tile.y) {
+                                    const destPiece = getPieceAtCoordinate(translatedPos, buildPieceView(pieces));
+                                    if (destPiece && piece.id !== destPiece.id) {
+                                        console.log("Piece would capture...");
+                                        setPieces(capturePiece(destPiece, pieces));
+                                        moveLog.recordMove(piece, translatedPos, "capture");
+                                    } else {
+                                        moveLog.recordMove(piece, translatedPos, "none");
+                                    }
+                                    piece.moveTo(translatedPos);
+                                    found = true;
+                                    break;
+                                };
                             };
-                        };
 
-                        if (!found) {
-                            console.log("Tried to drop piece, but wasn't at a valid coordinate.");
-                        };   
+                            if (!found) {
+                                console.log("Tried to drop piece, but wasn't at a valid coordinate.");
+                            } else {
+                                if (piece && piece instanceof SpecialMovablePiece) {
+                                    piece.hasMoved = true;
+                                }
+                            };   
+                        };
                     };
                 };
             };
@@ -375,6 +386,7 @@ function Chessboard() {
     }, [draggingPiece, highlightedTiles, mousePosition, pieces, getPieceById]);
 
     const SIZECALC = `${Globals.TILESIZE * Globals.BOARDSIZE}px`;
+    const moveLogElement = moveLog.buildElement();
 
     return (
         <div 
@@ -386,6 +398,7 @@ function Chessboard() {
             {cursorFollowerElement()}
             {highlightedTileElements}
             {allPieces}
+            {moveLogElement}
         </div>
     );
 };
