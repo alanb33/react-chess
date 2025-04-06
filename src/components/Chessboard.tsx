@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 
-import { Piece, PieceBuilder, PieceType, SpecialMovablePiece } from '../assets/types/chesspiece/ChessPieceTypes';
+import { Pawn, Piece, PieceBuilder, PieceType, SpecialMovablePiece } from '../assets/types/chesspiece/ChessPieceTypes';
 import ChessTile, { ChessTileInterface } from "./ChessTile"
 import { Coordinate, MousePos, TileColor } from "./CommonTypes";
 import HighlightedTile from "./HighlightedTile";
@@ -256,12 +256,9 @@ function Chessboard() {
                         const piece = getPieceById(pieceID)
                         if (piece) {
                             const highlights = [...piece.calculateMovement(allPieceView)];
-                            for (const highlight of highlights) {
-                                console.log(`Highlight: ${highlight.x}/${highlight.y}`);
-                            }
                             if (piece instanceof SpecialMovablePiece) {
-                                console.log("Calculating special moves...");
                                 const specialMoves = (piece as SpecialMovablePiece).calculateSpecialMovement(allPieceView);
+                                
                                 for (const move of specialMoves) {
                                     let found = false;
                                     for (const highlight of highlights) {
@@ -307,24 +304,72 @@ function Chessboard() {
                                 if (translatedPos.x === tile.x && translatedPos.y === tile.y) {
                                     const destPiece = getPieceAtCoordinate(translatedPos, buildPieceView(pieces));
                                     if (destPiece && piece.id !== destPiece.id) {
-                                        console.log("Piece would capture...");
                                         setPieces(capturePiece(destPiece, pieces));
                                         moveLog.recordMove(piece, translatedPos, "capture");
                                     } else {
-                                        moveLog.recordMove(piece, translatedPos, "none");
+                                        // Don't log an en passant move as a regular move
+                                        if (!(piece instanceof Pawn && piece.enPassantDest)) {
+                                            moveLog.recordMove(piece, translatedPos, "none");
+                                        }
                                     }
-                                    piece.moveTo(translatedPos);
                                     found = true;
                                     break;
                                 };
                             };
 
-                            if (!found) {
-                                console.log("Tried to drop piece, but wasn't at a valid coordinate.");
-                            } else {
-                                if (piece && piece instanceof SpecialMovablePiece) {
+                            if (found && piece) {
+                                if (piece instanceof SpecialMovablePiece) {
                                     piece.hasMoved = true;
+                                    if (piece instanceof Pawn) {
+                                        if (Math.abs(piece.y - translatedPos.y) === 2) {
+                                            console.log(`That was a double jump! Setting justDoubleAdvanced on ${piece.id}`);
+                                            piece.justDoubleAdvanced = true;
+                                        };
+                                    };
                                 }
+                                
+                                if (piece instanceof Pawn && piece.enPassantDest) {
+                                    console.log(`Working with a pawn and it has en passant dest of ${piece.enPassantDest.x}/${piece.enPassantDest.y}`);
+                                    console.log(`The translatedPos is ${translatedPos.x}/${translatedPos.y}`);
+                                    if (translatedPos.x === piece.enPassantDest.x && translatedPos.y === piece.enPassantDest.y) {
+                                        // Move up if we're moving a white
+                                        // piece and vice versa
+                                        const dir = 
+                                            piece.color === "white" ? -1 : 1;
+                                        const enPassantCoord: Coordinate = {
+                                            x: translatedPos.x,
+                                            y: translatedPos.y + dir,
+                                        };
+                                        const enPassantPawn = 
+                                            getPieceAtCoordinate(
+                                                enPassantCoord, pieces);
+                                                
+
+                                        setPieces(
+                                            capturePiece(
+                                                enPassantPawn!, pieces));
+
+                                        moveLog.recordMove(
+                                            piece, 
+                                            translatedPos, 
+                                            "en passant");
+
+                                        piece.enPassantDest = null;
+                                    }
+                                }
+
+                                piece.moveTo(translatedPos);
+
+                                // Clear any 'just double advanced' status for
+                                // other pawns, to prevent accidental cases of
+                                // en passant
+                                for (const otherPiece of pieces) {
+                                    if (otherPiece instanceof Pawn) {
+                                        if (otherPiece.id !== piece.id) {
+                                            otherPiece.justDoubleAdvanced = false;
+                                        };
+                                    };
+                                };
                             };   
                         };
                     };

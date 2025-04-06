@@ -49,6 +49,43 @@ class MoveLog {
         );
     };
 
+    getLatestLogEntry(): string {
+        /*
+            Here's the logic:
+
+            Turns only advance once a black movement has been made.
+
+            Thus, if it's turn 0 and white is blank, no move has been made.
+            
+            If it's turn >0 and white is blank, the latest entry will be
+                turn-1.black
+            
+            If it's white is not blank, then the latest entry will
+                be turn.white.
+
+            No checking for black is required since it can be implied from
+                the logic.
+        */
+
+        let lastTurn = "";
+
+        if (this.#turn > 0 && this.#turnHistory[this.#turn].white === "") {
+            // It's not turn 0, and white has no entry. This means the last
+            // turn was black on turn-1.
+            lastTurn = this.#turnHistory[this.#turn-1].black;
+        } else if (this.#turnHistory[this.#turn].white !== "") {
+            // It is turn 0 or later. White has an entry. This means the
+            // last move belonged to white.
+            lastTurn = this.#turnHistory[this.#turn].white;
+        };
+
+        // Implicitly, if neither of the above cases apply, this is turn zero,
+        // and white has no entry, so we return an empty string.
+
+        return lastTurn;
+        
+    };
+
     #getNormalMovement(piece: PieceView, dest: Coordinate) {
         
         const abbr = this.#getPieceAbbreviation(piece);
@@ -128,6 +165,12 @@ class MoveLog {
         return newString;
     };
 
+    #doCaptureSteps(moveString: string, piece: PieceView, dest: Coordinate): string {
+        moveString = this.#getNormalMovement(piece, dest);
+        moveString = this.#modifyForCaptureString(moveString, piece);
+        return moveString;
+    }
+
     recordMove(piece: PieceView, dest: Coordinate, manuever: Manuever = "none") {
 
         // Switch logic based on manuever
@@ -137,27 +180,28 @@ class MoveLog {
                 moveString = this.#getNormalMovement(piece, dest);
                 break;
             case "capture":
-                moveString = this.#getNormalMovement(piece, dest);
-                moveString = this.#modifyForCaptureString(moveString, piece);
+                moveString = this.#doCaptureSteps(moveString, piece, dest);
+                break;
+            case "en passant":
+                moveString = this.#doCaptureSteps(moveString, piece, dest);
+                moveString = `${moveString} e.p.`;
+                break;
         };
 
         this.#writeLog(moveString, piece.color as Side);
     };
 
     #writeLog(move: string, color: Side) {
-        if (this.#turnHistory.length - 1 !== this.#turn) {
-            const blankEntry = {"white": "", "black": ""}
-            this.#turnHistory.push(blankEntry);
-        }
-        console.log(`this.turn is ${this.#turn}`);
+
         const entry: ScoreEntry = this.#turnHistory[this.#turn];
         entry[color] = move;
 
         if (color === "black") {
             this.#turn++;
-        }
+            const blankEntry = {"white": "", "black": ""}
+            this.#turnHistory.push(blankEntry);
+        };        
     };
-
-}
+};
 
 export default MoveLog;

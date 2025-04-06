@@ -1,4 +1,4 @@
-import { Piece } from "../assets/types/chesspiece/ChessPieceTypes";
+import { Pawn, Piece } from "../assets/types/chesspiece/ChessPieceTypes";
 
 // Reduced view of a Piece for passing less information around
 export interface PieceView {
@@ -6,6 +6,10 @@ export interface PieceView {
     x: number;
     y: number;
     color: string;
+}
+
+export interface PieceViewPawn extends PieceView {
+    justDoubleAdvanced: boolean;
 }
 
 export function getPieceTypeFromId(pieceID: string): string {
@@ -21,6 +25,11 @@ export function buildPieceView(allPieces: Piece[]): PieceView[] {
             y: piece.y, 
             color: piece.color
         };
+        if (getPieceTypeFromId(piece.id) === "pawn") {
+            const pieceViewPawn = pieceView as PieceViewPawn;
+            const piecePawn = piece as Pawn;
+            pieceViewPawn.justDoubleAdvanced = piecePawn.justDoubleAdvanced;
+        }
         pieceViewArray.push(pieceView)
     }
     return pieceViewArray;

@@ -1,7 +1,7 @@
 import ChessPiece from "../../../components/ChessPiece";
 import { Coordinate } from "../../../components/CommonTypes";
 import { getPieceAtCoordinate, getTileKeyFromCoordinates, isCoordinateValid, isPieceAtCoordinate } from "../../../utils/tile-utils";
-import { PieceView } from "../../../utils/piece-utils";
+import { PieceView, PieceViewPawn } from "../../../utils/piece-utils";
 import Globals from "../../../config/globals";
 
 export type PieceType = "pawn" | "rook" | "knight" | "bishop" | "king" | "queen";
@@ -161,7 +161,16 @@ export abstract class SpecialMovablePiece extends Piece {
     abstract calculateSpecialMovement(allPieces: PieceView[]): Coordinate[];
 }
 
-class Pawn extends SpecialMovablePiece {
+export class Pawn extends SpecialMovablePiece {
+    enPassantDest: Coordinate | null;
+    justDoubleAdvanced: boolean;
+
+    constructor (name: PieceType, color: string, x: number, y: number) {
+        super(name, color, x, y);
+        this.enPassantDest = null;
+        this.justDoubleAdvanced = false;
+    }
+
     calculateMovement(allPieces: PieceView[]): Coordinate[] {
         const tilesToHighlight = [];
 
@@ -180,10 +189,8 @@ class Pawn extends SpecialMovablePiece {
                 const diagonalX = [-1, 1];
                 if (piece.y === dest.y && piece.color !== this.color) {
                     for (const diagonal of diagonalX) {
-                        console.log(`Testing diagonal ${diagonal}`);
                         if (piece.x === dest.x + diagonal) {
                             const enemyCoord: Coordinate = {x: dest.x + diagonal, y: dest.y}
-                            console.log(`Pushing enemy piece from ${piece.x}/${piece.y}`);
                             tilesToHighlight.push(enemyCoord);
                         };
                     };
@@ -198,13 +205,47 @@ class Pawn extends SpecialMovablePiece {
         return tilesToHighlight;
     };
 
-    calculateSpecialMovement(allPieces: PieceView[]): Coordinate[] {
+    override calculateSpecialMovement(allPieces: PieceView[]): Coordinate[] {
         const highlights: Coordinate[] = [];
-        highlights.push(...this.calculateFirstTurnAdvancement(allPieces));
+        highlights.push(...this.#calculateFirstTurnAdvancement(allPieces));
+        highlights.push(...this.#calculateEnPassant(allPieces));
         return highlights;
     }
 
-    calculateFirstTurnAdvancement(allPieces: PieceView[]): Coordinate[] {
+    #calculateEnPassant(allPieces: PieceView[]): Coordinate[] {
+        console.log("Calculating en passant possibility.")
+        const highlights: Coordinate[] = [];
+
+        for (const piece of allPieces) {
+            if (Object.hasOwn(piece, "justDoubleAdvanced")) {
+                const otherPawn = piece as PieceViewPawn;
+                if (otherPawn.id !== this.id) {
+                    if (otherPawn.color !== this.color) {
+                        const xDistance = Math.abs(otherPawn.x - this.x);
+                        if (otherPawn.y === this.y && xDistance === 1) {
+                            // If there is another pawn beside us that is not our color...
+                            if (otherPawn.justDoubleAdvanced) {
+                                // We a have a valid en passant target!
+                                const dir = otherPawn.color === "white" ? -1 : 1;
+                                const dest: Coordinate = {x: otherPawn.x, y: otherPawn.y + dir };
+                                this.enPassantDest = dest;
+                                highlights.push(dest); 
+                            };
+                        };
+                    };
+                };
+            };
+        };
+
+        console.log(`en passant highlights length: ${highlights.length}`)
+        if (highlights.length > 0) {
+            console.log(`highlights[0] === ${highlights[0].x}/${highlights[0].y}`)
+        };
+
+        return highlights;
+    };
+
+    #calculateFirstTurnAdvancement(allPieces: PieceView[]): Coordinate[] {
         const highlights: Coordinate[] = [];
 
         if (!this.hasMoved) {
