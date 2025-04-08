@@ -67,6 +67,10 @@ export function doCastling(validPiece: Piece, realTilePos: Coordinate, allPieces
 
                 recordingData.mode = "castling queen";
             };
+
+            // Clear any castling status afterwards
+            validPiece.kingCastlingDest = null;
+            validPiece.queenCastlingDest = null;
         };
 
     return recordingData;
