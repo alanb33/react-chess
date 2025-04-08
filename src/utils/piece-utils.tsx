@@ -1,4 +1,4 @@
-import { Pawn, Piece } from "../assets/types/chesspiece/ChessPieceTypes";
+import { Pawn, Piece, SpecialMovablePiece } from "../assets/types/chesspiece/ChessPieceTypes";
 
 // Reduced view of a Piece for passing less information around
 export interface PieceView {
@@ -8,7 +8,11 @@ export interface PieceView {
     color: string;
 }
 
-export interface PieceViewPawn extends PieceView {
+export interface PieceViewSpecialMovable extends PieceView {
+    hasMoved: boolean;
+}
+
+export interface PieceViewPawn extends PieceViewSpecialMovable {
     justDoubleAdvanced: boolean;
 }
 
@@ -25,10 +29,21 @@ export function buildPieceView(allPieces: Piece[]): PieceView[] {
             y: piece.y, 
             color: piece.color
         };
-        if (getPieceTypeFromId(piece.id) === "pawn") {
-            const pieceViewPawn = pieceView as PieceViewPawn;
-            const piecePawn = piece as Pawn;
-            pieceViewPawn.justDoubleAdvanced = piecePawn.justDoubleAdvanced;
+
+        // Set hasMoved status for special movables
+        const pieceType = getPieceTypeFromId(piece.id);
+        switch (pieceType) {
+            case "rook":
+            case "king":
+            case "pawn": {
+                (pieceView as PieceViewSpecialMovable).hasMoved = (piece as SpecialMovablePiece).hasMoved;
+                break;
+            }
+        }
+
+        // Set double advancement for pawns
+        if (pieceType === "pawn") {
+            (pieceView as PieceViewPawn).justDoubleAdvanced = (piece as Pawn).justDoubleAdvanced;
         }
         pieceViewArray.push(pieceView)
     }

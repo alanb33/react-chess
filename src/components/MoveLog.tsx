@@ -6,7 +6,7 @@ import { getTileKeyFromCoordinates } from "../utils/tile-utils";
 
 type Side = "white" | "black"
 
-type Manuever = "en passant" | "castling" | "capture" | "none"
+export type Manuever = "en passant" | "castling king" | "castling queen" | "capture" | "none"
 
 interface ScoreEntry {
     "white": string;
@@ -185,6 +185,12 @@ class MoveLog {
             case "en passant":
                 moveString = this.#doCaptureSteps(moveString, piece, dest);
                 moveString = `${moveString} e.p.`;
+                break;
+            case "castling king":
+                moveString = "O-O";
+                break;
+            case "castling queen":
+                moveString = "O-O-O";
                 break;
         };
 

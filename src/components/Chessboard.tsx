@@ -9,9 +9,10 @@ import MoveLog from "./MoveLog";
 import Globals from "../config/globals";
 import { isChessPiece, isTileKey } from "../utils/validators";
 import { getPieceAtCoordinate, getTileKeyFromCoordinates, isPieceAtTile } from '../utils/tile-utils';
-import { buildPieceView, capturePiece } from '../utils/piece-utils';
+import { buildPieceView, capturePiece, PieceView } from '../utils/piece-utils';
 
 import "./Chessboard.css";
+import { doCastling, doDoublePawnAdvancement, doEnPassant, RecordingData } from '../utils/move-logic';
 
 interface TileGrid {
     [key: string]: ChessTileInterface;
@@ -283,89 +284,92 @@ function Chessboard() {
         // the page is being re-rendered and the drag state is lost
         function handleDragEnd(event: MouseEvent) {
             if (draggingPiece) {
-                const piece = getPieceById(draggingPiece);
+                const validPiece = getPieceById(draggingPiece);
+
+                let recordingData: RecordingData = {
+                    validPiece: null,
+                    realTilePos: null,
+                    mode: "none",
+                };
                 
-                if (piece) {
+                if (validPiece) {
+                    let capturingPiece: PieceView | null = null;
+
                     setDraggingPiece(null)
                     setHighlightedTiles([])
                     const dropPos: Coordinate = {
                         x: event.pageX,
                         y: event.pageY
                     };
-                    const translatedPos: Coordinate = {
+                    const realTilePos: Coordinate = {
                         x: Math.floor(dropPos.x / Globals.TILESIZE), 
                         y: Math.floor(dropPos.y / Globals.TILESIZE)
                     };
 
-                    if (translatedPos.x > 0 && translatedPos.x <= Globals.BOARDSIZE) {
-                        if (translatedPos.y > 0 && translatedPos.y <= Globals.BOARDSIZE) {
-                            let found = null;
+                    if (realTilePos.x > 0 && realTilePos.x <= Globals.BOARDSIZE) {
+                        if (realTilePos.y > 0 && realTilePos.y <= Globals.BOARDSIZE) {
+                            let destTileValid = null;
                             for (const tile of highlightedTiles) {
-                                if (translatedPos.x === tile.x && translatedPos.y === tile.y) {
-                                    const destPiece = getPieceAtCoordinate(translatedPos, buildPieceView(pieces));
-                                    if (destPiece && piece.id !== destPiece.id) {
-                                        setPieces(capturePiece(destPiece, pieces));
-                                        moveLog.recordMove(piece, translatedPos, "capture");
+                                if (realTilePos.x === tile.x && realTilePos.y === tile.y) {
+                                    const destPiece = getPieceAtCoordinate(realTilePos, buildPieceView(pieces));
+                                    if (destPiece && validPiece.id !== destPiece.id) {
+                                        capturingPiece = destPiece;
+                                        recordingData = {
+                                            validPiece: validPiece,
+                                            realTilePos: realTilePos, 
+                                            mode: "capture"
+                                        };
                                     } else {
-                                        // Don't log an en passant move as a regular move
-                                        if (!(piece instanceof Pawn && piece.enPassantDest)) {
-                                            moveLog.recordMove(piece, translatedPos, "none");
+                                        // Don't log special non-captures as a regular move
+                                        if (!(validPiece instanceof Pawn && validPiece.enPassantDest)) {
+                                            recordingData = {
+                                                validPiece: validPiece,
+                                                realTilePos: realTilePos, 
+                                                mode: "none"
+                                            };
                                         }
                                     }
-                                    found = true;
+                                    destTileValid = true;
                                     break;
                                 };
                             };
 
-                            if (found && piece) {
-                                if (piece instanceof SpecialMovablePiece) {
-                                    piece.hasMoved = true;
-                                    if (piece instanceof Pawn) {
-                                        if (Math.abs(piece.y - translatedPos.y) === 2) {
-                                            console.log(`That was a double jump! Setting justDoubleAdvanced on ${piece.id}`);
-                                            piece.justDoubleAdvanced = true;
-                                        };
-                                    };
-                                }
+                            // We have a good destination and a valid piece
+                            if (destTileValid && validPiece) {
+
+                                // Pawn double advancement logic
+                                doDoublePawnAdvancement(validPiece, realTilePos);
                                 
-                                if (piece instanceof Pawn && piece.enPassantDest) {
-                                    console.log(`Working with a pawn and it has en passant dest of ${piece.enPassantDest.x}/${piece.enPassantDest.y}`);
-                                    console.log(`The translatedPos is ${translatedPos.x}/${translatedPos.y}`);
-                                    if (translatedPos.x === piece.enPassantDest.x && translatedPos.y === piece.enPassantDest.y) {
-                                        // Move up if we're moving a white
-                                        // piece and vice versa
-                                        const dir = 
-                                            piece.color === "white" ? -1 : 1;
-                                        const enPassantCoord: Coordinate = {
-                                            x: translatedPos.x,
-                                            y: translatedPos.y + dir,
-                                        };
-                                        const enPassantPawn = 
-                                            getPieceAtCoordinate(
-                                                enPassantCoord, pieces);
-                                                
-
-                                        setPieces(
-                                            capturePiece(
-                                                enPassantPawn!, pieces));
-
-                                        moveLog.recordMove(
-                                            piece, 
-                                            translatedPos, 
-                                            "en passant");
-
-                                        piece.enPassantDest = null;
-                                    }
+                                // En passant logic
+                                const enPassantData = doEnPassant(validPiece, realTilePos, pieces);
+                                if (enPassantData) {
+                                    capturingPiece = enPassantData.capturingPiece!;
+                                    recordingData = enPassantData.recordingData!;
+                                }
+;
+                                // Castling logic
+                                const castlingData = doCastling(validPiece, realTilePos, pieces);
+                                if (castlingData) {
+                                    recordingData = castlingData!;
                                 }
 
-                                piece.moveTo(translatedPos);
+                                moveLog.recordMove(
+                                    recordingData.validPiece as Piece,
+                                    recordingData.realTilePos as Coordinate,
+                                    recordingData.mode
+                                )
+                                validPiece.moveTo(realTilePos);
+
+                                if (capturingPiece) {
+                                    setPieces(capturePiece(capturingPiece, pieces));
+                                }
 
                                 // Clear any 'just double advanced' status for
                                 // other pawns, to prevent accidental cases of
                                 // en passant
                                 for (const otherPiece of pieces) {
                                     if (otherPiece instanceof Pawn) {
-                                        if (otherPiece.id !== piece.id) {
+                                        if (otherPiece.id !== validPiece.id) {
                                             otherPiece.justDoubleAdvanced = false;
                                         };
                                     };

@@ -1,7 +1,7 @@
 import ChessPiece from "../../../components/ChessPiece";
 import { Coordinate } from "../../../components/CommonTypes";
 import { getPieceAtCoordinate, getTileKeyFromCoordinates, isCoordinateValid, isPieceAtCoordinate } from "../../../utils/tile-utils";
-import { PieceView, PieceViewPawn } from "../../../utils/piece-utils";
+import { getPieceTypeFromId, PieceView, PieceViewPawn } from "../../../utils/piece-utils";
 import Globals from "../../../config/globals";
 
 export type PieceType = "pawn" | "rook" | "knight" | "bishop" | "king" | "queen";
@@ -281,10 +281,16 @@ export class Pawn extends SpecialMovablePiece {
     }
 };
 
-class Rook extends Piece {
+class Rook extends SpecialMovablePiece {
     calculateMovement(allPieces: PieceView[]): Coordinate[] {
         const toCheck: Dir[] = ["n", "e", "s", "w"];
         return getDirectionalTiles(this, allPieces, toCheck);
+    };
+
+    calculateSpecialMovement(allPieces: PieceView[]): Coordinate[] {
+        // This is a dummy function; Rook has no special movements of its own,
+        // but needs to be SpecialMovablePiece for invocations of hasMoved
+        return [];
     };
 };
 
@@ -382,19 +388,13 @@ class Knight extends Piece {
                 dest.x = this.x + xMovement;
                 dest.y = this.y + yMovement;
 
-                console.log(`Knight trying destination ${dest.x}/${dest.y}`);
-
                 if (isCoordinateValid(dest)) {
                     if (isPieceAtCoordinate(dest, allPieces)) {
                         const piece = getPieceAtCoordinate(dest, allPieces)!;
-                        console.log(`A piece is present at ${dest.x}/${dest.y} and it's color ${piece.color} versus our ${this.color}`);
                         // Only mark if it's an enemy piece
                         if (piece.color !== this.color) {
-                            console.log("...so it should be getting pushed.")
                             tiles.push(dest);
-                        } else {
-                            console.log("...so it shouldn't get pushed.");
-                        }
+                        };
                     } else {
                         // No piece is there
                         tiles.push(dest);
@@ -415,16 +415,125 @@ class Bishop extends Piece {
     }
 }
 
-class King extends SpecialMovablePiece {
+export class King extends SpecialMovablePiece {
+    kingCastlingDest: Coordinate | null;
+    queenCastlingDest: Coordinate | null;
+
+    constructor (name: PieceType, color: string, x: number, y: number) {
+        super(name, color, x, y);
+        this.kingCastlingDest = null;
+        this.queenCastlingDest = null;
+    }
+
     calculateMovement(allPieces: PieceView[]): Coordinate[] {
         const toCheck: Dir[] = ["n", "e", "s", "w", "nw", "sw", "se", "ne"];
         return getDirectionalTiles(this, allPieces, toCheck, 1);
     }
 
     calculateSpecialMovement(allPieces: PieceView[]): Coordinate[] {
-        return [];
-    }
-}
+        const specialHighlights = [];
+        const kingCastling = this.#calculateKingSideCastling(allPieces);
+        const queenCastling = this.#calculateQueenSideCastling(allPieces);
+
+        if (kingCastling) {
+            specialHighlights.push(kingCastling)
+        };
+
+        if (queenCastling) {
+            specialHighlights.push(queenCastling);
+        };
+
+        return specialHighlights;
+    };
+
+    #calculateKingSideCastling(allPieces: PieceView[]): Coordinate | null {
+        /*
+            Kingside Castling: If the King has not moved, and there are two
+            free spaces to the right of the King, and there is a Rook three
+            spaces to the right of the King, and the Rook has not moved, and
+            the Rook is the same color as the King,
+
+            then highlight the space two to the right and mark a castlingDest.
+        */
+
+        // If we haven't moved...
+        if (!this.hasMoved) {
+            const possibleCastlingCoord = {x: this.x + 2, y: this.y};
+            let valid = true;
+            for (let i = 1; i <= 2; i++) {
+                const dest: Coordinate = {x: this.x + i, y: this.y};
+                if (getPieceAtCoordinate(dest, allPieces)) {
+                    valid = false;
+                    break;
+                };
+            };
+            if (valid) {
+                // The next two steps are clear...
+                const possibleRook = getPieceAtCoordinate({x: this.x + 3, y: this.y}, allPieces);
+                if (possibleRook) {
+                    const possibleRookType = getPieceTypeFromId(possibleRook.id);
+                    if (possibleRookType === "rook") {
+                        if (possibleRook.color === this.color) {
+                            const ourRook = possibleRook as Rook;
+                            if (!ourRook.hasMoved) {
+                                // It's all valid, send it!
+                                this.kingCastlingDest = possibleCastlingCoord;
+                                return possibleCastlingCoord;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+
+        // No valid place for castling
+        return null;
+    };
+
+    #calculateQueenSideCastling(allPieces: PieceView[]): Coordinate | null {
+        /*
+            Queenside Castling: If the King has not moved, and there are three
+            free spaces to the left of the King, and there is a Rook four
+            spaces to the right of the King, and the Rook has not moved, and
+            the Rook is the same color as the King,
+
+            then highlight the space three to the left and mark a castlingDest.
+        */
+
+        // If we haven't moved...
+        if (!this.hasMoved) {
+            const possibleCastlingCoord = {x: this.x - 2, y: this.y};
+            let valid = true;
+            for (let i = 1; i <= 3; i++) {
+                const dest: Coordinate = {x: this.x - i, y: this.y};
+                if (getPieceAtCoordinate(dest, allPieces)) {
+                    valid = false;
+                    break;
+                };
+            }
+            if (valid) {
+                // The next two steps are clear...
+                const possibleRook = getPieceAtCoordinate({x: this.x - 4, y: this.y}, allPieces);
+                if (possibleRook) {
+                    const possibleRookType = getPieceTypeFromId(possibleRook.id);
+                    if (possibleRookType === "rook") {
+                        if (possibleRook.color === this.color) {
+                            const ourRook = possibleRook as Rook;
+                            if (!ourRook.hasMoved) {
+                                // It's all valid, send it!
+                                this.queenCastlingDest = possibleCastlingCoord;
+                                return possibleCastlingCoord;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+
+        // No valid place for castling
+        return null;
+    };
+};
 
 class Queen extends Piece {
     calculateMovement(allPieces: PieceView[]): Coordinate[] {
