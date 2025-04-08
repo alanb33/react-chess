@@ -56,7 +56,7 @@ export function doCastling(validPiece: Piece, realTilePos: Coordinate, allPieces
             };
 
             // Queenside castling logic
-            if (validPiece.kingCastlingDest) {
+            if (validPiece.queenCastlingDest) {
                 // Grab the Rook that's kingside.
                 const rookPos = {x: validPiece.x - 4, y: validPiece.y};
                 const actualRook = getActualRook(rookPos)!;
@@ -67,6 +67,10 @@ export function doCastling(validPiece: Piece, realTilePos: Coordinate, allPieces
 
                 recordingData.mode = "castling queen";
             };
+
+            // Clear any castling status afterwards
+            validPiece.kingCastlingDest = null;
+            validPiece.queenCastlingDest = null;
         };
 
     return recordingData;
