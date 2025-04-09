@@ -17,5 +17,7 @@ export class Coordinate {
         return false;
     }
 
+    toString(): string {return `[${this.x}/${this.y}]`};
+
     // getPiecesInRange(allPieces: Piece[], threateningColor: PieceColor): Piece[];
 }

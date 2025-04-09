@@ -1,12 +1,38 @@
+import { Coordinate } from "./coordinate";
 import { Pawn, Piece, SpecialMovablePiece } from "../assets/types/chesspiece/ChessPieceTypes";
 
-// Reduced view of a Piece for passing less information around
-export interface PieceView {
-    id: string;
-    x: number;
-    y: number;
-    color: string;
-}
+// Reduced read-only view of a Piece for passing less information around
+export class PieceView {
+    readonly id: string;
+    readonly _x: number;
+    readonly _y: number;
+    readonly color: string;
+
+    get coordinate() {
+        return new Coordinate(this._x, this._y);
+    }
+
+    constructor(id: string, coordinate: Coordinate, color: string) {
+        this.id = id;
+        this._x = coordinate.x;
+        this._y = coordinate.y;
+        this.color = color;
+    }
+
+    static buildFrom(piece: Piece) {
+        // Build a PieceView from a regular Piece.
+
+        return new PieceView(
+            piece.id,
+            piece.coordinate,
+            piece.color
+        );
+    };
+
+    equals(other: Piece | PieceView): boolean {
+        return this.id === other.id;
+    };
+};
 
 export interface PieceViewSpecialMovable extends PieceView {
     hasMoved: boolean;
@@ -23,12 +49,7 @@ export function getPieceTypeFromId(pieceID: string): string {
 export function buildPieceView(allPieces: Piece[]): PieceView[] {
     const pieceViewArray = []
     for (const piece of allPieces) {
-        const pieceView = {
-            id: piece.id,
-            x: piece.x, 
-            y: piece.y, 
-            color: piece.color
-        };
+        const pieceView = PieceView.buildFrom(piece);
 
         // Set hasMoved status for special movables
         const pieceType = getPieceTypeFromId(piece.id);

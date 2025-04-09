@@ -1,8 +1,8 @@
-import { Coordinate } from "./CommonTypes";
+import { Coordinate } from "../utils/coordinate";
 import Globals from "../config/globals";
 import { PieceType } from "../assets/types/chesspiece/ChessPieceTypes";
 import { getPieceTypeFromId, PieceView } from "../utils/piece-utils";
-import { getTileKeyFromCoordinates } from "../utils/tile-utils";
+import { getTileKeyFromCoordinate } from "../utils/tile-utils";
 
 type Side = "white" | "black"
 
@@ -14,7 +14,7 @@ interface ScoreEntry {
 };
 
 class MoveLog {
-    readonly #turn: number;
+    #turn: number;
     readonly #turnHistory: ScoreEntry[];
     
     constructor() {
@@ -89,7 +89,7 @@ class MoveLog {
     #getNormalMovement(piece: PieceView, dest: Coordinate) {
         
         const abbr = this.#getPieceAbbreviation(piece);
-        const destKey = getTileKeyFromCoordinates(dest.x, dest.y).toLowerCase();
+        const destKey = getTileKeyFromCoordinate(dest).toLowerCase();
         const assembled = `${abbr}${destKey}`
 
         return assembled;
@@ -157,7 +157,7 @@ class MoveLog {
                     For example, if the pawn moved from Column D to capture
                     a piece in E6, then the string will be dxe6.
                 */
-               const originColumnLetter = getTileKeyFromCoordinates(piece.x, piece.y).toLowerCase()[0];
+               const originColumnLetter = getTileKeyFromCoordinate(piece.coordinate).toLowerCase()[0];
                newString = `${originColumnLetter}x${moveString}`;
             }
         };

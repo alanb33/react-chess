@@ -9,7 +9,7 @@ import MoveLog from "./MoveLog";
 
 import Globals from "../config/globals";
 import { isChessPiece, isTileKey } from "../utils/validators";
-import { getPieceAtCoordinate, getTileKeyFromCoordinates, isPieceAtTile } from '../utils/tile-utils';
+import { getPieceViewAtCoordinate, getTileKeyFromCoordinate, isPieceAtTile } from '../utils/tile-utils';
 import { buildPieceView, capturePiece, PieceView } from '../utils/piece-utils';
 
 import "./Chessboard.css";
@@ -48,7 +48,7 @@ function buildChessboard(): TileGrid {
                 }
             }
 
-            const tileKey = getTileKeyFromCoordinates(col, row);
+            const tileKey = getTileKeyFromCoordinate(new Coordinate(col, row));
             const chessTile: ChessTileInterface = {
                 id: tileKey,
                 x: col,
@@ -114,14 +114,14 @@ function Chessboard() {
 
             if (!singlePiece) {
                 // For reference: wl/wr/bl/br = white-left, white-right, black-left, black-right
-                const wl = PieceBuilder.buildPiece(piece, "white", column, royal ? row.white.royal : row.white.pawn);
-                const wr = PieceBuilder.buildPiece(piece, "white", max - column, royal ? row.white.royal : row.white.pawn);
-                const bl = PieceBuilder.buildPiece(piece, "black", column, royal ? row.black.royal : row.black.pawn);
-                const br = PieceBuilder.buildPiece(piece, "black", max - column, royal ? row.black.royal : row.black.pawn);
+                const wl = PieceBuilder.buildPiece(piece, "white", new Coordinate(column, royal ? row.white.royal : row.white.pawn));
+                const wr = PieceBuilder.buildPiece(piece, "white", new Coordinate(max - column, royal ? row.white.royal : row.white.pawn));
+                const bl = PieceBuilder.buildPiece(piece, "black", new Coordinate(column, royal ? row.black.royal : row.black.pawn));
+                const br = PieceBuilder.buildPiece(piece, "black", new Coordinate(max - column, royal ? row.black.royal : row.black.pawn));
                 pieces.push(wl, wr, bl, br);
             } else {
-                const w = PieceBuilder.buildPiece(piece, "white", column, royal ? row.white.royal : row.white.pawn);
-                const b = PieceBuilder.buildPiece(piece, "black", column, royal ? row.black.royal : row.black.pawn);
+                const w = PieceBuilder.buildPiece(piece, "white", new Coordinate(column, royal ? row.white.royal : row.white.pawn));
+                const b = PieceBuilder.buildPiece(piece, "black", new Coordinate(column, royal ? row.black.royal : row.black.pawn));
                 pieces.push(w, b);
             };
             return pieces;
@@ -215,7 +215,7 @@ function Chessboard() {
     };
 
     const highlightedTileElements = highlightedTiles.map((tileCoordinate) => {
-        const tileKey = getTileKeyFromCoordinates(tileCoordinate.x, tileCoordinate.y);
+        const tileKey = getTileKeyFromCoordinate(tileCoordinate);
         if (isTileKey(tileKey)) { 
             const tile = chessboard[tileKey];
             const color = isPieceAtTile(tile, pieces) ? "pink" : "lightgreen";
@@ -303,7 +303,7 @@ function Chessboard() {
                             let destTileValid = null;
                             for (const tile of highlightedTiles) {
                                 if (realTilePos.x === tile.x && realTilePos.y === tile.y) {
-                                    const destPiece = getPieceAtCoordinate(realTilePos, buildPieceView(pieces));
+                                    const destPiece = getPieceViewAtCoordinate(realTilePos, buildPieceView(pieces));
                                     if (destPiece && validPiece.id !== destPiece.id) {
                                         capturingPiece = destPiece;
                                         recordingData = {
@@ -346,7 +346,7 @@ function Chessboard() {
                                 }
 
                                 moveLog.recordMove(
-                                    recordingData.validPiece as Piece,
+                                    recordingData.validPiece!,
                                     recordingData.realTilePos as Coordinate,
                                     recordingData.mode
                                 )
