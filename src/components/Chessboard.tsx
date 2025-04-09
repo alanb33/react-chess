@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { Pawn, Piece, PieceBuilder, PieceType, SpecialMovablePiece } from '../assets/types/chesspiece/ChessPieceTypes';
 import ChessTile, { ChessTileInterface } from "./ChessTile"
-import { Coordinate, MousePos, TileColor } from "./CommonTypes";
+import { MousePos, TileColor } from "./CommonTypes";
+import { Coordinate } from '../utils/coordinate';
 import HighlightedTile from "./HighlightedTile";
 import MoveLog from "./MoveLog";
 
@@ -53,13 +54,6 @@ function buildChessboard(): TileGrid {
                 x: col,
                 y: row,
                 color: tileColor,
-                getCenter(): Coordinate {
-                    const coord: Coordinate = {
-                        x: ((this.x - 1) * Globals.TILESIZE) / 2,
-                        y: ((this.y - 1) * Globals.TILESIZE) / 2,
-                    };
-                    return coord;
-                }
             };
 
             newChessboard[tileKey] = chessTile;
@@ -81,7 +75,6 @@ const tiles = tileKeys.map((tile) => {
             y={chessboard[tile].y}
             color={chessboard[tile].color}
             border={chessboard[tile].color}
-            getCenter={chessboard[tile].getCenter}
         />
     )
 });
@@ -211,7 +204,7 @@ function Chessboard() {
                             left: mousePosition.x - Globals.TILESIZE / 2,
                             top: mousePosition.y - Globals.TILESIZE / 2,
                             width: `${Globals.TILESIZE}px`,
-                            height: `${Globals.TILESIZE}px`,
+                            height: `${Globals.TILESIZE}px`
                         }}
                     />
                 );
@@ -297,14 +290,13 @@ function Chessboard() {
 
                     setDraggingPiece(null)
                     setHighlightedTiles([])
-                    const dropPos: Coordinate = {
-                        x: event.pageX,
-                        y: event.pageY
-                    };
-                    const realTilePos: Coordinate = {
-                        x: Math.floor(dropPos.x / Globals.TILESIZE), 
-                        y: Math.floor(dropPos.y / Globals.TILESIZE)
-                    };
+                    const dropPos: Coordinate 
+                        = new Coordinate (event.pageX, event.pageY);
+                    const realTilePos: Coordinate 
+                        = new Coordinate (
+                            Math.floor(dropPos.x / Globals.TILESIZE),
+                            Math.floor(dropPos.y / Globals.TILESIZE)
+                        ); 
 
                     if (realTilePos.x > 0 && realTilePos.x <= Globals.BOARDSIZE) {
                         if (realTilePos.y > 0 && realTilePos.y <= Globals.BOARDSIZE) {

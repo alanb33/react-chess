@@ -1,4 +1,4 @@
-import { Coordinate } from "../components/CommonTypes";
+import { Coordinate } from "../utils/coordinate"
 import { King, Pawn, Piece, SpecialMovablePiece } from "../assets/types/chesspiece/ChessPieceTypes";
 import { getPieceAtCoordinate } from "./tile-utils";
 import { Manuever } from "../components/MoveLog";
@@ -45,7 +45,7 @@ export function doCastling(validPiece: Piece, realTilePos: Coordinate, allPieces
             // Kingside castling logic
             if (validPiece.kingCastlingDest) {
                 // Grab the Rook that's kingside.
-                const rookPos = {x: validPiece.x + 3, y: validPiece.y};
+                const rookPos = new Coordinate(validPiece.x + 3, validPiece.y);
                 const actualRook = getActualRook(rookPos)!;
 
                 // Move that rook!
@@ -58,7 +58,7 @@ export function doCastling(validPiece: Piece, realTilePos: Coordinate, allPieces
             // Queenside castling logic
             if (validPiece.queenCastlingDest) {
                 // Grab the Rook that's kingside.
-                const rookPos = {x: validPiece.x - 4, y: validPiece.y};
+                const rookPos = new Coordinate(validPiece.x - 4, validPiece.y);
                 const actualRook = getActualRook(rookPos)!;
 
                 // Move that rook!
@@ -98,10 +98,10 @@ export function doEnPassant(validPiece: Piece, realTilePos: Coordinate, allPiece
             // piece and vice versa
             const dir = 
                 validPiece.color === "white" ? -1 : 1;
-            const enPassantCoord: Coordinate = {
-                x: realTilePos.x,
-                y: realTilePos.y + dir,
-            };
+            const enPassantCoord: Coordinate = new Coordinate(
+                realTilePos.x,
+                realTilePos.y + dir,
+            );
             const enPassantPawn = 
                 getPieceAtCoordinate(
                     enPassantCoord, allPieces);

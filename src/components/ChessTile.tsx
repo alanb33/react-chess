@@ -1,5 +1,5 @@
-import { Coordinate, TileColor } from "./CommonTypes";
 import "./ChessTile.css";
+import { TileColor } from "./CommonTypes";
 
 import Globals from "../config/globals"
 
@@ -8,7 +8,6 @@ interface ChessTileInterface {
     x: number,
     y: number,
     color: TileColor;
-    getCenter(): Coordinate
 };
 
 interface Props {
@@ -17,7 +16,6 @@ interface Props {
     y: number,
     color: TileColor,
     border: TileColor,
-    getCenter(): Coordinate,
 };
 
 const WHITE_COLOR = "cornsilk";
