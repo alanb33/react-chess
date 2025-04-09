@@ -14,8 +14,8 @@ interface ScoreEntry {
 };
 
 class MoveLog {
-    #turn: number;
-    #turnHistory: ScoreEntry[];
+    readonly #turn: number;
+    readonly #turnHistory: ScoreEntry[];
     
     constructor() {
         this.#turn = 0;

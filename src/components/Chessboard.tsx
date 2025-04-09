@@ -222,7 +222,7 @@ function Chessboard() {
             return (
                 <HighlightedTile 
                     key={`highlightedTile-${tile.id}`}
-                    coordinates={{x: tile.x, y: tile.y}}
+                    coordinates={new Coordinate(tile.x, tile.y)}
                     color={color}
                     />
             );
