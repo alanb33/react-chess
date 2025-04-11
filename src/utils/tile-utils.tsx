@@ -20,8 +20,7 @@ export const columnTranslationKey: Array<ColumnLetter> = [
 export function getTileHighlights(targetPiece: Piece, allPieces: PieceView[]): Coordinate[] {
     for (const piece of allPieces) {
         if (piece.id === targetPiece.id) {
-            // TODO: Don't pass all the actual objects; pass a reduced version with coordinates to parse on its return
-            return targetPiece.calculateMovement(allPieces);
+            return targetPiece.calculateMovement(allPieces, true);
         }
     };
     return [];
@@ -41,7 +40,6 @@ export function isCoordinateValid(coord: Coordinate): boolean {
     return false;
 }
 
-// TODO: As getTileHighlights; devise a way to just pass a view of pieces.
 export function isPieceAtTile(tile: ChessTileInterface, allPieces: PieceView[] | Piece[]): boolean {
     for (const piece of allPieces) {
         if (piece.coordinate.x === tile.x && piece.coordinate.y === tile.y) {
