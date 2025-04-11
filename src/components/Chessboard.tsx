@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 
-import { Pawn, Piece, PieceBuilder, PieceType, SpecialMovablePiece } from '../assets/types/chesspiece/ChessPieceTypes';
+import { Pawn, Piece, PieceBuilder, PieceType, Rook, SpecialMovablePiece } from '../assets/types/chesspiece/ChessPieceTypes';
 import ChessTile, { ChessTileInterface } from "./ChessTile"
 import { MousePos, TileColor } from "./CommonTypes";
 import { Coordinate } from '../utils/coordinate';
@@ -249,7 +249,13 @@ function Chessboard() {
                         const allPieceView = buildPieceView(pieces);
                         const piece = getPieceById(pieceID)
                         if (piece) {
-                            const highlights = [...piece.calculateMovement(allPieceView)];
+                            let highlights = []
+                            if (piece instanceof Rook) {
+                                highlights = piece.calculateMovement(allPieceView, false);
+                            } else {
+                                highlights = [...piece.calculateMovement(allPieceView, true)];
+                            }
+                            //const 
                             if (piece instanceof SpecialMovablePiece) {
                                 const specialMoves = (piece as SpecialMovablePiece).calculateSpecialMovement(allPieceView);
                                 

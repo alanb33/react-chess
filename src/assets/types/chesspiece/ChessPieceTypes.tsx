@@ -1,5 +1,6 @@
 import ChessPiece from "../../../components/ChessPiece";
 import { Coordinate } from "../../../utils/coordinate";
+import { Dir, getDirectionalTiles } from "../../../utils/move-logic";
 import { getPieceViewAtCoordinate, getTileKeyFromCoordinate, isCoordinateValid, isPieceAtCoordinate } from "../../../utils/tile-utils";
 import { getPieceTypeFromId, PieceView, PieceViewPawn, PieceViewSpecialMovable } from "../../../utils/piece-utils";
 import Globals from "../../../config/globals";
@@ -8,70 +9,6 @@ export type PieceType = "pawn" | "rook" | "knight" | "bishop" | "king" | "queen"
 export type PieceColor = "white" | "black";
 
 const pieceDict: {[key: string]: number} = {};
-
-type Dir = "n" | "ne" | "e" | "se" | "s" | "sw" | "w" | "nw";
-
-function getDirectionalTiles(origin: Piece, allPieces: PieceView[], directions: Dir[], maxDistance = Globals.BOARDSIZE): Coordinate[] {
-
-    // Prepare the checking dictionary with all directions we need
-    const checking: {[key: string]: boolean} = {}
-    for (const dir of directions) {
-        checking[dir] = true;
-    }
-
-    const returnTiles = [];
-
-    for (let i = 1; i <= maxDistance; i++) {
-        for (const dir of directions) {
-            if (checking[dir]) {
-                let xMovement = 0;
-                let yMovement = 0;
-
-                /* 
-                    Since the Dir type is n/ne/se, etc -- this should get the
-                    proper directions from their string contents!
-                */
-                if (dir.includes("n")) {
-                    yMovement = -i;
-                } else if (dir.includes("s")) {
-                    yMovement = i;
-                }
-                if (dir.includes("w")) {
-                    xMovement = -i;
-                } else if (dir.includes("e")) {
-                    xMovement = i;
-                }
-
-                const dest: Coordinate = new Coordinate(
-                    origin.coordinate.x + xMovement,
-                    origin.coordinate.y + yMovement);
-                if (isCoordinateValid(dest)) {
-                    // If the destination is valid...
-                    if (isPieceAtCoordinate(dest, allPieces)) {
-                        // And there is a piece at the destination....
-                        const piece = getPieceViewAtCoordinate(dest, allPieces)
-                        if (piece!.color !== origin.color) {
-                            // Highlight it if it's an enemy piece.
-                            returnTiles.push(dest);
-                        }
-                        // In any case, we're done checking in this direction.
-                        checking[dir] = false;
-                        continue;
-                    } else {
-                        // If there is no piece in that direction...
-                        returnTiles.push(dest)
-                    }
-                } else {
-                    // It's not a valid coordinate, so stop checking in this direction.
-                    checking[dir] = false;
-                    continue;
-                };
-            };
-        };
-    };
-
-    return returnTiles;
-};
 
 function generatePieceID(name: PieceType, color: string): string {
 
@@ -99,6 +36,10 @@ export class PieceBuilder {
         };
     };
 };
+
+export interface IFirstMovable {
+    hasMoved: boolean;
+}
 
 export abstract class Piece {
     readonly name: PieceType;
@@ -145,7 +86,7 @@ export abstract class Piece {
         />
     };
 
-    abstract calculateMovement(allpieces: PieceView[]): Coordinate[];
+    abstract calculateMovement(allPieces: PieceView[], stopAtEnemyPiece: boolean): Coordinate[];
 
     equals(other: Piece | PieceView) {
         return this.id === other.id;
@@ -165,7 +106,7 @@ export abstract class Piece {
     }
 };
 
-export abstract class SpecialMovablePiece extends Piece {
+export abstract class SpecialMovablePiece extends Piece implements IFirstMovable {
     hasMoved: boolean;
 
     constructor (name: PieceType, color: string, coord: Coordinate) {
@@ -184,6 +125,11 @@ export class Pawn extends SpecialMovablePiece {
         super(name, color, coord);
         this.enPassantDest = null;
         this.justDoubleAdvanced = false;
+    }
+
+    calculateUnblockedMovement(allPieces: PieceView[]): Coordinate[] {
+        // No special calculations required for pawns
+        return this.calculateMovement(allPieces);
     }
 
     calculateMovement(allPieces: PieceView[]): Coordinate[] {
@@ -289,21 +235,23 @@ export class Pawn extends SpecialMovablePiece {
     }
 };
 
-class Rook extends SpecialMovablePiece {
-    calculateMovement(allPieces: PieceView[]): Coordinate[] {
-        const toCheck: Dir[] = ["n", "e", "s", "w"];
-        return getDirectionalTiles(this, allPieces, toCheck);
-    };
+export class Rook extends Piece implements IFirstMovable {
+    hasMoved: boolean = false;
+    toCheck: Dir[] = ["n", "e", "w", "s"];
+    
+    // Special logic for rooks; there are no special movement calculations
+    override moveTo(dest: Coordinate): void {
+        super.moveTo(dest);
+        this.hasMoved = true;
+    }
 
-    calculateSpecialMovement(allPieces: PieceView[]): Coordinate[] {
-        // This is a dummy function; Rook has no special movements of its own,
-        // but needs to be SpecialMovablePiece for invocations of hasMoved
-        return [];
+    override calculateMovement(allPieces: PieceView[], stopAtEnemyPiece: boolean = true): Coordinate[] {
+        return getDirectionalTiles(this, allPieces, this.toCheck, stopAtEnemyPiece);
     };
 };
 
 class Knight extends Piece {
-    calculateMovement(allPieces: PieceView[]): Coordinate[] {
+    override calculateMovement(allPieces: PieceView[]): Coordinate[] {
 
         /*
             The knight moves in an unusual L-shaped pattern.
@@ -417,7 +365,7 @@ class Knight extends Piece {
 };
 
 class Bishop extends Piece {
-    calculateMovement(allPieces: PieceView[]): Coordinate[] {
+    override calculateMovement(allPieces: PieceView[]): Coordinate[] {
         const toCheck: Dir[] = ["nw", "sw", "se", "ne"];
         return getDirectionalTiles(this, allPieces, toCheck);
     }
@@ -433,9 +381,9 @@ export class King extends SpecialMovablePiece {
         this.queenCastlingDest = null;
     }
 
-    calculateMovement(allPieces: PieceView[]): Coordinate[] {
+    override calculateMovement(allPieces: PieceView[]): Coordinate[] {
         const toCheck: Dir[] = ["n", "e", "s", "w", "nw", "sw", "se", "ne"];
-        return getDirectionalTiles(this, allPieces, toCheck, 1);
+        return getDirectionalTiles(this, allPieces, toCheck);
     }
 
     calculateSpecialMovement(allPieces: PieceView[]): Coordinate[] {
@@ -544,8 +492,8 @@ export class King extends SpecialMovablePiece {
 };
 
 class Queen extends Piece {
-    calculateMovement(allPieces: PieceView[]): Coordinate[] {
+    override calculateMovement(allPieces: PieceView[]): Coordinate[] {
         const toCheck: Dir[] = ["n", "e", "s", "w", "nw", "sw", "se", "ne"];
         return getDirectionalTiles(this, allPieces, toCheck);
-    }
+    };
 }

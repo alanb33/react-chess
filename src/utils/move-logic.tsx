@@ -1,8 +1,11 @@
-import { Coordinate } from "../utils/coordinate"
+import { Coordinate } from "../utils/coordinate";
+import Globals from "../config/globals";
 import { King, Pawn, Piece, SpecialMovablePiece } from "../assets/types/chesspiece/ChessPieceTypes";
 import { PieceView } from "./piece-utils";
-import { getPieceAtCoordinate, getPieceViewAtCoordinate } from "./tile-utils";
+import { getPieceAtCoordinate, getPieceViewAtCoordinate, isCoordinateValid, isPieceAtCoordinate } from "./tile-utils";
 import { Manuever } from "../components/MoveLog";
+
+export type Dir = "n" | "ne" | "e" | "se" | "s" | "sw" | "w" | "nw";
 
 export interface RecordingData {
     validPiece: PieceView | null;
@@ -52,6 +55,8 @@ export function doCastling(validPiece: PieceView, realTilePos: Coordinate, allPi
                 // Move that rook!
                 const rookNewX = actualRook.coordinate.x - 2;
                 actualRook.coordinate = new Coordinate(rookNewX, actualRook.coordinate.y);
+                // Funny way to set property without Rook inheriting SpecialMovablePiece
+                Object.defineProperty(actualRook, "hasMoved", {value: true});
 
                 recordingData.mode = "castling king";
             };
@@ -127,3 +132,70 @@ export function doEnPassant(validPiece: Piece, realTilePos: Coordinate, allPiece
         recordingData: recordingData,
     };
 }
+
+export function getDirectionalTiles(origin: Piece, allPieces: PieceView[], directions: Dir[], stopAtEnemyPiece: boolean = true): Coordinate[] {
+
+    // Prepare the checking dictionary with all directions we need
+    const checking: {[key: string]: boolean} = {}
+    for (const dir of directions) {
+        checking[dir] = true;
+    }
+
+    const returnTiles = [];
+
+    const distance = origin instanceof King ? 1 : Globals.BOARDSIZE;
+
+    for (let i = 1; i <= distance; i++) {
+        for (const dir of directions) {
+            if (checking[dir]) {
+                let xMovement = 0;
+                let yMovement = 0;
+
+                /* 
+                    Since the Dir type is n/ne/se, etc -- this should get the
+                    proper directions from their string contents!
+                */
+                if (dir.includes("n")) {
+                    yMovement = -i;
+                } else if (dir.includes("s")) {
+                    yMovement = i;
+                }
+                if (dir.includes("w")) {
+                    xMovement = -i;
+                } else if (dir.includes("e")) {
+                    xMovement = i;
+                }
+
+                const dest: Coordinate = new Coordinate(
+                    origin.coordinate.x + xMovement,
+                    origin.coordinate.y + yMovement);
+                if (isCoordinateValid(dest)) {
+                    // If the destination is valid...
+                    if (isPieceAtCoordinate(dest, allPieces)) {
+                        // And there is a piece at the destination....
+                        const piece = getPieceViewAtCoordinate(dest, allPieces)
+                        
+                        if (piece!.color !== origin.color) {
+                            // Highlight it if it's an enemy piece.
+                            returnTiles.push(dest);
+                        }
+                        if (stopAtEnemyPiece) {
+                            // In any case, we're done checking in this direction.
+                            checking[dir] = false;
+                            continue;
+                        }
+                    } else {
+                        // If there is no piece in that direction...
+                        returnTiles.push(dest)
+                    }
+                } else {
+                    // It's not a valid coordinate, so stop checking in this direction.
+                    checking[dir] = false;
+                    continue;
+                };
+            };
+        };
+    };
+
+    return returnTiles;
+};
