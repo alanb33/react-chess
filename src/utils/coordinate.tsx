@@ -1,6 +1,3 @@
-// import { buildPieceView } from "./piece-utils";
-// import { Piece, PieceColor } from "../assets/types/chesspiece/ChessPieceTypes";
-
 export class Coordinate {
     x: number = 0;
     y: number = 0;

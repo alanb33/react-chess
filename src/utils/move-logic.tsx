@@ -178,9 +178,12 @@ export function getDirectionalTiles(origin: Piece, allPieces: PieceView[], direc
                         if (piece!.color !== origin.color) {
                             // Highlight it if it's an enemy piece.
                             returnTiles.push(dest);
-                        }
-                        if (stopAtEnemyPiece) {
-                            // In any case, we're done checking in this direction.
+                            if (stopAtEnemyPiece) {
+                                checking[dir] = false;
+                                continue;
+                            }
+                        // Always stop if it's a friendly piece
+                        } else {
                             checking[dir] = false;
                             continue;
                         }
