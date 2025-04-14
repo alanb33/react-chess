@@ -1,5 +1,5 @@
 import Globals from "../config/globals";
-import { Coordinate } from "./CommonTypes";
+import { Coordinate } from "../utils/coordinate";
 
 interface HighlightedTileInterface {
     coordinates: Coordinate,

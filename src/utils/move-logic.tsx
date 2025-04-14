@@ -1,15 +1,19 @@
-import { Coordinate } from "../utils/coordinate"
+import { Coordinate } from "../utils/coordinate";
+import Globals from "../config/globals";
 import { King, Pawn, Piece, SpecialMovablePiece } from "../assets/types/chesspiece/ChessPieceTypes";
-import { getPieceAtCoordinate } from "./tile-utils";
+import { PieceView } from "./piece-utils";
+import { getPieceAtCoordinate, getPieceViewAtCoordinate, isCoordinateValid, isPieceAtCoordinate } from "./tile-utils";
 import { Manuever } from "../components/MoveLog";
 
+export type Dir = "n" | "ne" | "e" | "se" | "s" | "sw" | "w" | "nw";
+
 export interface RecordingData {
-    validPiece: Piece | null;
+    validPiece: PieceView | null;
     realTilePos: Coordinate | null;
     mode: Manuever;
 };
 
-export function doCastling(validPiece: Piece, realTilePos: Coordinate, allPieces: Piece[]): RecordingData | null {
+export function doCastling(validPiece: PieceView, realTilePos: Coordinate, allPieces: Piece[]): RecordingData | null {
     /* 
         The King AND the Rook need to be moved.
         If we are doing castling, then we have previously validated
@@ -21,11 +25,11 @@ export function doCastling(validPiece: Piece, realTilePos: Coordinate, allPieces
 
     function getActualRook(rookPos: Coordinate): Piece | null {
         // Piece is guaranteed to be valid at this call.
-        const rookView = getPieceAtCoordinate(rookPos, allPieces);
+        const rookView = getPieceViewAtCoordinate(rookPos, allPieces);
         let rook: Piece | null = null;
 
         for (const piece of allPieces) {
-            if (piece.id === rookView!.id) {
+            if (piece.equals(rookView!)) {
                 rook = piece;
                 break;
             };
@@ -45,12 +49,14 @@ export function doCastling(validPiece: Piece, realTilePos: Coordinate, allPieces
             // Kingside castling logic
             if (validPiece.kingCastlingDest) {
                 // Grab the Rook that's kingside.
-                const rookPos = new Coordinate(validPiece.x + 3, validPiece.y);
+                const rookPos = new Coordinate(validPiece.coordinate.x + 3, validPiece.coordinate.y);
                 const actualRook = getActualRook(rookPos)!;
 
                 // Move that rook!
-                const rookNewX = actualRook.x - 2;
-                actualRook.x = rookNewX;
+                const rookNewX = actualRook.coordinate.x - 2;
+                actualRook.coordinate = new Coordinate(rookNewX, actualRook.coordinate.y);
+                // Funny way to set property without Rook inheriting SpecialMovablePiece
+                Object.defineProperty(actualRook, "hasMoved", {value: true});
 
                 recordingData.mode = "castling king";
             };
@@ -58,12 +64,12 @@ export function doCastling(validPiece: Piece, realTilePos: Coordinate, allPieces
             // Queenside castling logic
             if (validPiece.queenCastlingDest) {
                 // Grab the Rook that's kingside.
-                const rookPos = new Coordinate(validPiece.x - 4, validPiece.y);
+                const rookPos = new Coordinate(validPiece.coordinate.x - 4, validPiece.coordinate.y);
                 const actualRook = getActualRook(rookPos)!;
 
                 // Move that rook!
-                const rookNewX = actualRook.x + 3;
-                actualRook.x = rookNewX;
+                const rookNewX = actualRook.coordinate.x + 3;
+                actualRook.coordinate = new Coordinate(rookNewX, actualRook.coordinate.y);
 
                 recordingData.mode = "castling queen";
             };
@@ -81,7 +87,7 @@ export function doDoublePawnAdvancement(validPiece: Piece, realTilePos: Coordina
     if (validPiece instanceof SpecialMovablePiece) {
         validPiece.hasMoved = true;
         if (validPiece instanceof Pawn) {
-            if (Math.abs(validPiece.y - realTilePos.y) === 2) {
+            if (Math.abs(validPiece.coordinate.y - realTilePos.y) === 2) {
                 validPiece.justDoubleAdvanced = true;
             };
         };
@@ -126,3 +132,73 @@ export function doEnPassant(validPiece: Piece, realTilePos: Coordinate, allPiece
         recordingData: recordingData,
     };
 }
+
+export function getDirectionalTiles(origin: Piece, allPieces: PieceView[], directions: Dir[], stopAtEnemyPiece: boolean = true): Coordinate[] {
+
+    // Prepare the checking dictionary with all directions we need
+    const checking: {[key: string]: boolean} = {}
+    for (const dir of directions) {
+        checking[dir] = true;
+    }
+
+    const returnTiles = [];
+
+    const distance = origin instanceof King ? 1 : Globals.BOARDSIZE;
+
+    for (let i = 1; i <= distance; i++) {
+        for (const dir of directions) {
+            if (checking[dir]) {
+                let xMovement = 0;
+                let yMovement = 0;
+
+                /* 
+                    Since the Dir type is n/ne/se, etc -- this should get the
+                    proper directions from their string contents!
+                */
+                if (dir.includes("n")) {
+                    yMovement = -i;
+                } else if (dir.includes("s")) {
+                    yMovement = i;
+                }
+                if (dir.includes("w")) {
+                    xMovement = -i;
+                } else if (dir.includes("e")) {
+                    xMovement = i;
+                }
+
+                const dest: Coordinate = new Coordinate(
+                    origin.coordinate.x + xMovement,
+                    origin.coordinate.y + yMovement);
+                if (isCoordinateValid(dest)) {
+                    // If the destination is valid...
+                    if (isPieceAtCoordinate(dest, allPieces)) {
+                        // And there is a piece at the destination....
+                        const piece = getPieceViewAtCoordinate(dest, allPieces)
+                        
+                        if (piece!.color !== origin.color) {
+                            // Highlight it if it's an enemy piece.
+                            returnTiles.push(dest);
+                            if (stopAtEnemyPiece) {
+                                checking[dir] = false;
+                                continue;
+                            }
+                        // Always stop if it's a friendly piece
+                        } else {
+                            checking[dir] = false;
+                            continue;
+                        }
+                    } else {
+                        // If there is no piece in that direction...
+                        returnTiles.push(dest)
+                    }
+                } else {
+                    // It's not a valid coordinate, so stop checking in this direction.
+                    checking[dir] = false;
+                    continue;
+                };
+            };
+        };
+    };
+
+    return returnTiles;
+};

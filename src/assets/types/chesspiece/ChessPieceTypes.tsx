@@ -1,77 +1,14 @@
 import ChessPiece from "../../../components/ChessPiece";
 import { Coordinate } from "../../../utils/coordinate";
-import { getPieceAtCoordinate, getTileKeyFromCoordinates, isCoordinateValid, isPieceAtCoordinate } from "../../../utils/tile-utils";
-import { getPieceTypeFromId, PieceView, PieceViewPawn } from "../../../utils/piece-utils";
+import { Dir, getDirectionalTiles } from "../../../utils/move-logic";
+import { getPieceViewAtCoordinate, getTileKeyFromCoordinate, isCoordinateValid, isPieceAtCoordinate } from "../../../utils/tile-utils";
+import { getPieceTypeFromId, PieceView, PieceViewPawn, PieceViewSpecialMovable } from "../../../utils/piece-utils";
 import Globals from "../../../config/globals";
 
 export type PieceType = "pawn" | "rook" | "knight" | "bishop" | "king" | "queen";
 export type PieceColor = "white" | "black";
 
 const pieceDict: {[key: string]: number} = {};
-
-type Dir = "n" | "ne" | "e" | "se" | "s" | "sw" | "w" | "nw";
-
-function getDirectionalTiles(origin: Piece, allPieces: PieceView[], directions: Dir[], maxDistance = Globals.BOARDSIZE): Coordinate[] {
-
-    // Prepare the checking dictionary with all directions we need
-    const checking: {[key: string]: boolean} = {}
-    for (const dir of directions) {
-        checking[dir] = true;
-    }
-
-    const returnTiles = [];
-
-    for (let i = 1; i <= maxDistance; i++) {
-        for (const dir of directions) {
-            if (checking[dir]) {
-                let xMovement = 0;
-                let yMovement = 0;
-
-                /* 
-                    Since the Dir type is n/ne/se, etc -- this should get the
-                    proper directions from their string contents!
-                */
-                if (dir.includes("n")) {
-                    yMovement = -i;
-                } else if (dir.includes("s")) {
-                    yMovement = i;
-                }
-                if (dir.includes("w")) {
-                    xMovement = -i;
-                } else if (dir.includes("e")) {
-                    xMovement = i;
-                }
-
-                const dest: Coordinate = new Coordinate(
-                    origin.x + xMovement,
-                    origin.y + yMovement);
-                if (isCoordinateValid(dest)) {
-                    // If the destination is valid...
-                    if (isPieceAtCoordinate(dest, allPieces)) {
-                        // And there is a piece at the destination....
-                        const piece = getPieceAtCoordinate(dest, allPieces)
-                        if (piece!.color !== origin.color) {
-                            // Highlight it if it's an enemy piece.
-                            returnTiles.push(dest);
-                        }
-                        // In any case, we're done checking in this direction.
-                        checking[dir] = false;
-                        continue;
-                    } else {
-                        // If there is no piece in that direction...
-                        returnTiles.push(dest)
-                    }
-                } else {
-                    // It's not a valid coordinate, so stop checking in this direction.
-                    checking[dir] = false;
-                    continue;
-                };
-            };
-        };
-    };
-
-    return returnTiles;
-};
 
 function generatePieceID(name: PieceType, color: string): string {
 
@@ -87,8 +24,8 @@ function generatePieceID(name: PieceType, color: string): string {
 }
 
 export class PieceBuilder {
-    static buildPiece (name: PieceType, color: string, x: number, y: number) {
-        const params: [PieceType, string, number, number] = [name, color, x, y];
+    static buildPiece (name: PieceType, color: string, coord: Coordinate) {
+        const params: [PieceType, string, Coordinate] = [name, color, coord];
         switch (name) {
             case "pawn": return new Pawn(...params);
             case "rook": return new Rook(...params);
@@ -100,64 +37,80 @@ export class PieceBuilder {
     };
 };
 
-export abstract class Piece {
-    name: PieceType;
-    color: string;
-    x: number;
-    y: number;
-    id: string;
-    imagePath: string;
+export interface IFirstMovable {
+    hasMoved: boolean;
+}
 
-    constructor (name: PieceType, color: string, x: number, y: number) {
+export abstract class Piece {
+    readonly name: PieceType;
+    readonly color: string;
+    _x: number;
+    _y: number;
+    readonly id: string;
+    readonly imagePath: string;
+
+    get coordinate() {
+        return new Coordinate(this._x, this._y);
+    }
+
+    set coordinate(newCoord: Coordinate) {
+        this._x = newCoord.x;
+        this._y = newCoord.y;
+    }
+
+    constructor (name: PieceType, color: string, coord: Coordinate) {
         this.name = name;
         this.color = color;
         this.id = generatePieceID(this.name, this.color);
         this.imagePath = `src/assets/images/${this.name}-${this.color[0]}.png`
 
-        if ((x > 0 && x <= Globals.BOARDSIZE) && (y > 0 && y <= Globals.BOARDSIZE)) {
-            this.x = x;
-            this.y = y;
+        if ((coord.x > 0 && coord.x <= Globals.BOARDSIZE) && (coord.x > 0 && coord.y <= Globals.BOARDSIZE)) {
+            this._x = coord.x;
+            this._y = coord.y;
         } else {
-            console.error(`Failed to assign proper tile to ${color} ${name}: received ${x}/${y}, using 0/0 fallback`);
-            this.x = 0;
-            this.y = 0;
-        }
+            console.error(`Failed to assign proper tile to ${color} ${name}: received ${coord}, using 0/0 fallback`);
+            this._x = 0;
+            this._y = 0;
+        };
     };
-
-    getCoordinate(): Coordinate { return new Coordinate(this.x, this.y) };
 
     buildElement() {
         return <ChessPiece
             id={this.id}
             key={this.id}
-            x={this.x}
-            y={this.y}
+            x={this.coordinate.x}
+            y={this.coordinate.y}
             color={this.color}
             imagePath={this.imagePath}
-            boardPosition={getTileKeyFromCoordinates(this.x, this.y)}
+            boardPosition={getTileKeyFromCoordinate(this.coordinate)}
         />
     };
 
-    abstract calculateMovement(allpieces: PieceView[]): Coordinate[];
+    abstract calculateMovement(allPieces: PieceView[], stopAtEnemyPiece: boolean): Coordinate[];
+
+    equals(other: Piece | PieceView) {
+        return this.id === other.id;
+    }
 
     moveTo(dest: Coordinate) {
-        this.x = dest.x;
-        this.y = dest.y;
+        this.coordinate = dest;
     };
 
-    wouldCapture(other: PieceView) {
-        if (this.x === other.x && this.y === other.y) {
+    wouldCapture(other: Piece | PieceView) {
+        // Misleading implementation; used after drag rather than calculating
+        // possibility of capturing. Improve this!
+        if (this.coordinate.equals(other.coordinate)) {
             return true;
         }
         return false;
     }
 };
 
-export abstract class SpecialMovablePiece extends Piece {
+export abstract class SpecialMovablePiece extends Piece implements IFirstMovable {
     hasMoved: boolean;
 
-    constructor (name: PieceType, color: string, x: number, y: number) {
-        super(name, color, x, y);
+    constructor (name: PieceType, color: string, coord: Coordinate) {
+        super(name, color, coord);
         this.hasMoved = false;
     };
 
@@ -168,10 +121,15 @@ export class Pawn extends SpecialMovablePiece {
     enPassantDest: Coordinate | null;
     justDoubleAdvanced: boolean;
 
-    constructor (name: PieceType, color: string, x: number, y: number) {
-        super(name, color, x, y);
+    constructor (name: PieceType, color: string, coord: Coordinate) {
+        super(name, color, coord);
         this.enPassantDest = null;
         this.justDoubleAdvanced = false;
+    }
+
+    calculateUnblockedMovement(allPieces: PieceView[]): Coordinate[] {
+        // No special calculations required for pawns
+        return this.calculateMovement(allPieces);
     }
 
     calculateMovement(allPieces: PieceView[]): Coordinate[] {
@@ -180,19 +138,19 @@ export class Pawn extends SpecialMovablePiece {
         // If we're white, move downwards, and if black, move upwards.
         const dir = this.color === "white" ? 1 : -1;
 
-        if (this.y + dir > 0 || this.y + dir <= Globals.BOARDSIZE) {
-            const dest: Coordinate = new Coordinate(this.x, this.y + dir);
+        if (this.coordinate.y + dir > 0 || this.coordinate.y + dir <= Globals.BOARDSIZE) {
+            const dest: Coordinate = new Coordinate(this.coordinate.x, this.coordinate.y + dir);
             let pieceAhead = false;
             for (const piece of allPieces) {
-                if (piece.x === dest.x && piece.y === dest.y) {
+                if (piece.coordinate.x === dest.x && piece.coordinate.y === dest.y) {
                     pieceAhead = true;
                 };
 
                 // Check for enemy pieces in the diagonals
                 const diagonalX = [-1, 1];
-                if (piece.y === dest.y && piece.color !== this.color) {
+                if (piece.coordinate.y === dest.y && piece.color !== this.color) {
                     for (const diagonal of diagonalX) {
-                        if (piece.x === dest.x + diagonal) {
+                        if (piece.coordinate.x === dest.x + diagonal) {
                             const enemyCoord: Coordinate = new Coordinate(dest.x + diagonal, dest.y);
                             tilesToHighlight.push(enemyCoord);
                         };
@@ -216,7 +174,6 @@ export class Pawn extends SpecialMovablePiece {
     }
 
     #calculateEnPassant(allPieces: PieceView[]): Coordinate[] {
-        console.log("Calculating en passant possibility.")
         const highlights: Coordinate[] = [];
 
         for (const piece of allPieces) {
@@ -224,13 +181,13 @@ export class Pawn extends SpecialMovablePiece {
                 const otherPawn = piece as PieceViewPawn;
                 if (otherPawn.id !== this.id) {
                     if (otherPawn.color !== this.color) {
-                        const xDistance = Math.abs(otherPawn.x - this.x);
-                        if (otherPawn.y === this.y && xDistance === 1) {
+                        const xDistance = Math.abs(otherPawn.coordinate.x - this.coordinate.x);
+                        if (otherPawn.coordinate.y === this.coordinate.y && xDistance === 1) {
                             // If there is another pawn beside us that is not our color...
                             if (otherPawn.justDoubleAdvanced) {
                                 // We a have a valid en passant target!
                                 const dir = otherPawn.color === "white" ? -1 : 1;
-                                const dest: Coordinate = new Coordinate(otherPawn.x, otherPawn.y + dir);
+                                const dest: Coordinate = new Coordinate(otherPawn.coordinate.x, otherPawn.coordinate.y + dir);
                                 this.enPassantDest = dest;
                                 highlights.push(dest); 
                             };
@@ -238,11 +195,6 @@ export class Pawn extends SpecialMovablePiece {
                     };
                 };
             };
-        };
-
-        console.log(`en passant highlights length: ${highlights.length}`)
-        if (highlights.length > 0) {
-            console.log(`highlights[0] === ${highlights[0].x}/${highlights[0].y}`)
         };
 
         return highlights;
@@ -262,11 +214,10 @@ export class Pawn extends SpecialMovablePiece {
                     break;
                 };
 
-                const dest: Coordinate = new Coordinate(this.x, this.y + (dir * step));
+                const dest: Coordinate = new Coordinate(this.coordinate.x, this.coordinate.y + (dir * step));
                 if (isCoordinateValid(dest)) {
                     for (const piece of allPieces) {
-                        if (piece.x === dest.x && piece.y === dest.y) {
-                            console.log("The destination is blocked by another piece.");
+                        if (piece.coordinate.x === dest.x && piece.coordinate.y === dest.y) {
                             destBlocked = true;
                             break;
                         };
@@ -284,21 +235,23 @@ export class Pawn extends SpecialMovablePiece {
     }
 };
 
-class Rook extends SpecialMovablePiece {
-    calculateMovement(allPieces: PieceView[]): Coordinate[] {
-        const toCheck: Dir[] = ["n", "e", "s", "w"];
-        return getDirectionalTiles(this, allPieces, toCheck);
-    };
+export class Rook extends Piece implements IFirstMovable {
+    hasMoved: boolean = false;
+    toCheck: Dir[] = ["n", "e", "w", "s"];
+    
+    // Special logic for rooks; there are no special movement calculations
+    override moveTo(dest: Coordinate): void {
+        super.moveTo(dest);
+        this.hasMoved = true;
+    }
 
-    calculateSpecialMovement(allPieces: PieceView[]): Coordinate[] {
-        // This is a dummy function; Rook has no special movements of its own,
-        // but needs to be SpecialMovablePiece for invocations of hasMoved
-        return [];
+    override calculateMovement(allPieces: PieceView[], stopAtEnemyPiece: boolean = true): Coordinate[] {
+        return getDirectionalTiles(this, allPieces, this.toCheck, stopAtEnemyPiece);
     };
 };
 
 class Knight extends Piece {
-    calculateMovement(allPieces: PieceView[]): Coordinate[] {
+    override calculateMovement(allPieces: PieceView[]): Coordinate[] {
 
         /*
             The knight moves in an unusual L-shaped pattern.
@@ -388,12 +341,12 @@ class Knight extends Piece {
                 };
 
                 // Movements are now defined! We can assemble a dest from these.
-                dest.x = this.x + xMovement;
-                dest.y = this.y + yMovement;
+                dest.x = this.coordinate.x + xMovement;
+                dest.y = this.coordinate.y + yMovement;
 
                 if (isCoordinateValid(dest)) {
                     if (isPieceAtCoordinate(dest, allPieces)) {
-                        const piece = getPieceAtCoordinate(dest, allPieces)!;
+                        const piece = getPieceViewAtCoordinate(dest, allPieces)!;
                         // Only mark if it's an enemy piece
                         if (piece.color !== this.color) {
                             tiles.push(dest);
@@ -412,7 +365,7 @@ class Knight extends Piece {
 };
 
 class Bishop extends Piece {
-    calculateMovement(allPieces: PieceView[]): Coordinate[] {
+    override calculateMovement(allPieces: PieceView[]): Coordinate[] {
         const toCheck: Dir[] = ["nw", "sw", "se", "ne"];
         return getDirectionalTiles(this, allPieces, toCheck);
     }
@@ -422,15 +375,15 @@ export class King extends SpecialMovablePiece {
     kingCastlingDest: Coordinate | null;
     queenCastlingDest: Coordinate | null;
 
-    constructor (name: PieceType, color: string, x: number, y: number) {
-        super(name, color, x, y);
+    constructor (name: PieceType, color: string, coord: Coordinate) {
+        super(name, color, coord);
         this.kingCastlingDest = null;
         this.queenCastlingDest = null;
     }
 
-    calculateMovement(allPieces: PieceView[]): Coordinate[] {
+    override calculateMovement(allPieces: PieceView[]): Coordinate[] {
         const toCheck: Dir[] = ["n", "e", "s", "w", "nw", "sw", "se", "ne"];
-        return getDirectionalTiles(this, allPieces, toCheck, 1);
+        return getDirectionalTiles(this, allPieces, toCheck);
     }
 
     calculateSpecialMovement(allPieces: PieceView[]): Coordinate[] {
@@ -461,23 +414,23 @@ export class King extends SpecialMovablePiece {
 
         // If we haven't moved...
         if (!this.hasMoved) {
-            const possibleCastlingCoord = new Coordinate(this.x + 2, this.y);
+            const possibleCastlingCoord = new Coordinate(this.coordinate.x + 2, this.coordinate.y);
             let valid = true;
             for (let i = 1; i <= 2; i++) {
-                const dest: Coordinate = new Coordinate (this.x + i, this.y);
-                if (getPieceAtCoordinate(dest, allPieces)) {
+                const dest: Coordinate = new Coordinate (this.coordinate.x + i, this.coordinate.y);
+                if (getPieceViewAtCoordinate(dest, allPieces)) {
                     valid = false;
                     break;
                 };
             };
             if (valid) {
                 // The next two steps are clear...
-                const possibleRook = getPieceAtCoordinate(new Coordinate(this.x + 3, this.y), allPieces);
+                const possibleRook = getPieceViewAtCoordinate(new Coordinate(this.coordinate.x + 3, this.coordinate.y), allPieces);
                 if (possibleRook) {
                     const possibleRookType = getPieceTypeFromId(possibleRook.id);
                     if (possibleRookType === "rook") {
                         if (possibleRook.color === this.color) {
-                            const ourRook = possibleRook as Rook;
+                            const ourRook = possibleRook as PieceViewSpecialMovable;
                             if (!ourRook.hasMoved) {
                                 // It's all valid, send it!
                                 this.kingCastlingDest = possibleCastlingCoord;
@@ -505,23 +458,23 @@ export class King extends SpecialMovablePiece {
 
         // If we haven't moved...
         if (!this.hasMoved) {
-            const possibleCastlingCoord = new Coordinate(this.x - 2, this.y);
+            const possibleCastlingCoord = new Coordinate(this.coordinate.x - 2, this.coordinate.y);
             let valid = true;
             for (let i = 1; i <= 3; i++) {
-                const dest: Coordinate = new Coordinate(this.x - i, this.y);
-                if (getPieceAtCoordinate(dest, allPieces)) {
+                const dest: Coordinate = new Coordinate(this.coordinate.x - i, this.coordinate.y);
+                if (getPieceViewAtCoordinate(dest, allPieces)) {
                     valid = false;
                     break;
                 };
             }
             if (valid) {
                 // The next two steps are clear...
-                const possibleRook = getPieceAtCoordinate(new Coordinate (this.x - 4, this.y), allPieces);
+                const possibleRook = getPieceViewAtCoordinate(new Coordinate (this.coordinate.x - 4, this.coordinate.y), allPieces);
                 if (possibleRook) {
                     const possibleRookType = getPieceTypeFromId(possibleRook.id);
                     if (possibleRookType === "rook") {
                         if (possibleRook.color === this.color) {
-                            const ourRook = possibleRook as Rook;
+                            const ourRook = possibleRook as PieceViewSpecialMovable;
                             if (!ourRook.hasMoved) {
                                 // It's all valid, send it!
                                 this.queenCastlingDest = possibleCastlingCoord;
@@ -539,8 +492,8 @@ export class King extends SpecialMovablePiece {
 };
 
 class Queen extends Piece {
-    calculateMovement(allPieces: PieceView[]): Coordinate[] {
+    override calculateMovement(allPieces: PieceView[]): Coordinate[] {
         const toCheck: Dir[] = ["n", "e", "s", "w", "nw", "sw", "se", "ne"];
         return getDirectionalTiles(this, allPieces, toCheck);
-    }
+    };
 }
