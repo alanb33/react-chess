@@ -1,19 +1,18 @@
 import { Coordinate } from "../utils/coordinate";
 import Globals from "../config/globals";
 import { King, Pawn, Piece, SpecialMovablePiece } from "../assets/types/chesspiece/ChessPieceTypes";
-import { PieceView } from "./piece-utils";
 import { getPieceAtCoordinate, getPieceViewAtCoordinate, isCoordinateValid, isPieceAtCoordinate } from "./tile-utils";
 import { Manuever } from "../components/MoveLog";
 
 export type Dir = "n" | "ne" | "e" | "se" | "s" | "sw" | "w" | "nw";
 
 export interface RecordingData {
-    validPiece: PieceView | null;
+    validPiece: Piece | null;
     realTilePos: Coordinate | null;
     mode: Manuever;
 };
 
-export function doCastling(validPiece: PieceView, realTilePos: Coordinate, allPieces: Piece[]): RecordingData | null {
+export function doCastling(validPiece: Piece, realTilePos: Coordinate, allPieces: Piece[]): RecordingData | null {
     /* 
         The King AND the Rook need to be moved.
         If we are doing castling, then we have previously validated
@@ -133,7 +132,7 @@ export function doEnPassant(validPiece: Piece, realTilePos: Coordinate, allPiece
     };
 }
 
-export function getDirectionalTiles(origin: Piece, allPieces: PieceView[], directions: Dir[], stopAtEnemyPiece: boolean = true): Coordinate[] {
+export function getDirectionalTiles(origin: Piece, allPieces: Piece[], directions: Dir[], stopAtEnemyPiece: boolean = true): Coordinate[] {
 
     // Prepare the checking dictionary with all directions we need
     const checking: {[key: string]: boolean} = {}

@@ -2,7 +2,7 @@ import ChessPiece from "../../../components/ChessPiece";
 import { Coordinate } from "../../../utils/coordinate";
 import { Dir, getDirectionalTiles } from "../../../utils/move-logic";
 import { getPieceViewAtCoordinate, getTileKeyFromCoordinate, isCoordinateValid, isPieceAtCoordinate } from "../../../utils/tile-utils";
-import { getPieceTypeFromId, PieceView, PieceViewPawn, PieceViewSpecialMovable } from "../../../utils/piece-utils";
+import { getPieceTypeFromId } from "../../../utils/piece-utils";
 import Globals from "../../../config/globals";
 
 export type PieceType = "pawn" | "rook" | "knight" | "bishop" | "king" | "queen";
@@ -86,9 +86,9 @@ export abstract class Piece {
         />
     };
 
-    abstract calculateMovement(allPieces: PieceView[], stopAtEnemyPiece: boolean): Coordinate[];
+    abstract calculateMovement(allPieces: Piece[], stopAtEnemyPiece: boolean): Coordinate[];
 
-    equals(other: Piece | PieceView) {
+    equals(other: Piece) {
         return this.id === other.id;
     }
 
@@ -96,7 +96,7 @@ export abstract class Piece {
         this.coordinate = dest;
     };
 
-    wouldCapture(other: Piece | PieceView) {
+    wouldCapture(other: Piece) {
         // Misleading implementation; used after drag rather than calculating
         // possibility of capturing. Improve this!
         if (this.coordinate.equals(other.coordinate)) {
@@ -114,7 +114,7 @@ export abstract class SpecialMovablePiece extends Piece implements IFirstMovable
         this.hasMoved = false;
     };
 
-    abstract calculateSpecialMovement(allPieces: PieceView[]): Coordinate[];
+    abstract calculateSpecialMovement(allPieces: Piece[]): Coordinate[];
 }
 
 export class Pawn extends SpecialMovablePiece {
@@ -127,12 +127,12 @@ export class Pawn extends SpecialMovablePiece {
         this.justDoubleAdvanced = false;
     }
 
-    calculateUnblockedMovement(allPieces: PieceView[]): Coordinate[] {
+    calculateUnblockedMovement(allPieces: Piece[]): Coordinate[] {
         // No special calculations required for pawns
         return this.calculateMovement(allPieces);
     }
 
-    calculateMovement(allPieces: PieceView[]): Coordinate[] {
+    calculateMovement(allPieces: Piece[]): Coordinate[] {
         const tilesToHighlight = [];
 
         // If we're white, move downwards, and if black, move upwards.
@@ -166,19 +166,19 @@ export class Pawn extends SpecialMovablePiece {
         return tilesToHighlight;
     };
 
-    override calculateSpecialMovement(allPieces: PieceView[]): Coordinate[] {
+    override calculateSpecialMovement(allPieces: Piece[]): Coordinate[] {
         const highlights: Coordinate[] = [];
         highlights.push(...this.#calculateFirstTurnAdvancement(allPieces));
         highlights.push(...this.#calculateEnPassant(allPieces));
         return highlights;
     }
 
-    #calculateEnPassant(allPieces: PieceView[]): Coordinate[] {
+    #calculateEnPassant(allPieces: Piece[]): Coordinate[] {
         const highlights: Coordinate[] = [];
 
         for (const piece of allPieces) {
             if (Object.hasOwn(piece, "justDoubleAdvanced")) {
-                const otherPawn = piece as PieceViewPawn;
+                const otherPawn = piece as Pawn;
                 if (otherPawn.id !== this.id) {
                     if (otherPawn.color !== this.color) {
                         const xDistance = Math.abs(otherPawn.coordinate.x - this.coordinate.x);
@@ -200,7 +200,7 @@ export class Pawn extends SpecialMovablePiece {
         return highlights;
     };
 
-    #calculateFirstTurnAdvancement(allPieces: PieceView[]): Coordinate[] {
+    #calculateFirstTurnAdvancement(allPieces: Piece[]): Coordinate[] {
         const highlights: Coordinate[] = [];
 
         if (!this.hasMoved) {
@@ -245,13 +245,13 @@ export class Rook extends Piece implements IFirstMovable {
         this.hasMoved = true;
     }
 
-    override calculateMovement(allPieces: PieceView[], stopAtEnemyPiece: boolean = true): Coordinate[] {
+    override calculateMovement(allPieces: Piece[], stopAtEnemyPiece: boolean = true): Coordinate[] {
         return getDirectionalTiles(this, allPieces, this.toCheck, stopAtEnemyPiece);
     };
 };
 
 class Knight extends Piece {
-    override calculateMovement(allPieces: PieceView[]): Coordinate[] {
+    override calculateMovement(allPieces: Piece[]): Coordinate[] {
 
         /*
             The knight moves in an unusual L-shaped pattern.
@@ -365,7 +365,7 @@ class Knight extends Piece {
 };
 
 class Bishop extends Piece {
-    override calculateMovement(allPieces: PieceView[]): Coordinate[] {
+    override calculateMovement(allPieces: Piece[]): Coordinate[] {
         const toCheck: Dir[] = ["nw", "sw", "se", "ne"];
         return getDirectionalTiles(this, allPieces, toCheck);
     }
@@ -381,12 +381,12 @@ export class King extends SpecialMovablePiece {
         this.queenCastlingDest = null;
     }
 
-    override calculateMovement(allPieces: PieceView[]): Coordinate[] {
+    override calculateMovement(allPieces: Piece[]): Coordinate[] {
         const toCheck: Dir[] = ["n", "e", "s", "w", "nw", "sw", "se", "ne"];
         return getDirectionalTiles(this, allPieces, toCheck);
     }
 
-    calculateSpecialMovement(allPieces: PieceView[]): Coordinate[] {
+    calculateSpecialMovement(allPieces: Piece[]): Coordinate[] {
         const specialHighlights = [];
         const kingCastling = this.#calculateKingSideCastling(allPieces);
         const queenCastling = this.#calculateQueenSideCastling(allPieces);
@@ -402,7 +402,7 @@ export class King extends SpecialMovablePiece {
         return specialHighlights;
     };
 
-    #calculateKingSideCastling(allPieces: PieceView[]): Coordinate | null {
+    #calculateKingSideCastling(allPieces: Piece[]): Coordinate | null {
         /*
             Kingside Castling: If the King has not moved, and there are two
             free spaces to the right of the King, and there is a Rook three
@@ -430,7 +430,7 @@ export class King extends SpecialMovablePiece {
                     const possibleRookType = getPieceTypeFromId(possibleRook.id);
                     if (possibleRookType === "rook") {
                         if (possibleRook.color === this.color) {
-                            const ourRook = possibleRook as PieceViewSpecialMovable;
+                            const ourRook = possibleRook as Rook;
                             if (!ourRook.hasMoved) {
                                 // It's all valid, send it!
                                 this.kingCastlingDest = possibleCastlingCoord;
@@ -446,7 +446,7 @@ export class King extends SpecialMovablePiece {
         return null;
     };
 
-    #calculateQueenSideCastling(allPieces: PieceView[]): Coordinate | null {
+    #calculateQueenSideCastling(allPieces: Piece[]): Coordinate | null {
         /*
             Queenside Castling: If the King has not moved, and there are three
             free spaces to the left of the King, and there is a Rook four
@@ -474,7 +474,7 @@ export class King extends SpecialMovablePiece {
                     const possibleRookType = getPieceTypeFromId(possibleRook.id);
                     if (possibleRookType === "rook") {
                         if (possibleRook.color === this.color) {
-                            const ourRook = possibleRook as PieceViewSpecialMovable;
+                            const ourRook = possibleRook as Rook;
                             if (!ourRook.hasMoved) {
                                 // It's all valid, send it!
                                 this.queenCastlingDest = possibleCastlingCoord;
@@ -492,7 +492,7 @@ export class King extends SpecialMovablePiece {
 };
 
 class Queen extends Piece {
-    override calculateMovement(allPieces: PieceView[]): Coordinate[] {
+    override calculateMovement(allPieces: Piece[]): Coordinate[] {
         const toCheck: Dir[] = ["n", "e", "s", "w", "nw", "sw", "se", "ne"];
         return getDirectionalTiles(this, allPieces, toCheck);
     };
