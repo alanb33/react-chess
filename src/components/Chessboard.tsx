@@ -9,8 +9,8 @@ import MoveLog from "./MoveLog";
 
 import Globals from "../config/globals";
 import { isChessPiece, isTileKey } from "../utils/validators";
-import { getPieceViewAtCoordinate, getTileKeyFromCoordinate, isPieceAtTile } from '../utils/tile-utils';
-import { buildPieceView, capturePiece, PieceView } from '../utils/piece-utils';
+import { getPieceAtCoordinate, getTileKeyFromCoordinate, isPieceAtTile } from '../utils/tile-utils';
+import { capturePiece } from '../utils/piece-utils';
 
 import "./Chessboard.css";
 import { doCastling, doDoublePawnAdvancement, doEnPassant, RecordingData } from '../utils/move-logic';
@@ -246,18 +246,17 @@ function Chessboard() {
                     const pieceID = elem.getAttribute("id");
                     if (pieceID) {
                         setDraggingPiece(pieceID);
-                        const allPieceView = buildPieceView(pieces);
                         const piece = getPieceById(pieceID)
                         if (piece) {
                             let highlights = []
                             if (piece instanceof Rook) {
-                                highlights = piece.calculateMovement(allPieceView, false);
+                                highlights = piece.calculateMovement(pieces, false);
                             } else {
-                                highlights = [...piece.calculateMovement(allPieceView, true)];
+                                highlights = [...piece.calculateMovement(pieces, true)];
                             }
                             //const 
                             if (piece instanceof SpecialMovablePiece) {
-                                const specialMoves = (piece as SpecialMovablePiece).calculateSpecialMovement(allPieceView);
+                                const specialMoves = (piece as SpecialMovablePiece).calculateSpecialMovement(pieces);
                                 
                                 for (const move of specialMoves) {
                                     let found = false;
@@ -292,7 +291,7 @@ function Chessboard() {
                 };
                 
                 if (validPiece) {
-                    let capturingPiece: PieceView | null = null;
+                    let capturingPiece: Piece | null = null;
 
                     setDraggingPiece(null)
                     setHighlightedTiles([])
@@ -309,7 +308,7 @@ function Chessboard() {
                             let destTileValid = null;
                             for (const tile of highlightedTiles) {
                                 if (realTilePos.x === tile.x && realTilePos.y === tile.y) {
-                                    const destPiece = getPieceViewAtCoordinate(realTilePos, buildPieceView(pieces));
+                                    const destPiece = getPieceAtCoordinate(realTilePos, pieces);
                                     if (destPiece && validPiece.id !== destPiece.id) {
                                         capturingPiece = destPiece;
                                         recordingData = {
