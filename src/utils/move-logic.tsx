@@ -132,6 +132,46 @@ export function doEnPassant(validPiece: Piece, realTilePos: Coordinate, allPiece
     };
 }
 
+export function getDirTowardsEnemyKing(origin: Piece, enemyKing: Piece): string {
+    if (enemyKing.coordinate.y === origin.coordinate.y) {
+        if (enemyKing.coordinate.x < origin.coordinate.x) {
+            return "w";
+        } else {
+            return "e";
+        };
+    };
+
+    if (enemyKing.coordinate.x === origin.coordinate.x) {
+        if (enemyKing.coordinate.y < origin.coordinate.y) {
+            return "n";
+        } else {
+            return "s";
+        };
+    };
+
+    const yDiff = enemyKing.coordinate.y - origin.coordinate.y;
+    const xDiff = enemyKing.coordinate.x - origin.coordinate.x;
+
+    // If these are equal, then the enemy king is perfect diagonal from us.
+    if (Math.abs(yDiff) / Math.abs(xDiff) === 1) {
+        if (yDiff < 0) {
+            if (xDiff < 0) {
+                return "nw";
+            } else {
+                return "ne";
+            }
+        } else {
+            if (xDiff < 0) {
+                return "sw";
+            } else {
+                return "se";
+            }
+        }
+    } else {
+        return "none"
+    }
+}
+
 export function getDirectionalTiles(origin: Piece, allPieces: Piece[], directions: Dir[], stopAtEnemyPiece: boolean = true): Coordinate[] {
 
     // Prepare the checking dictionary with all directions we need
