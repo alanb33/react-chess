@@ -1,7 +1,8 @@
 import { Coordinate } from "../utils/coordinate";
 import Globals from "../config/globals";
+import { Piece } from "../assets/types/chesspiece/ChessPieceTypes";
 import { PieceType } from "../assets/types/chesspiece/ChessPieceTypes";
-import { getPieceTypeFromId, PieceView } from "../utils/piece-utils";
+import { getPieceTypeFromId } from "../utils/piece-utils";
 import { getTileKeyFromCoordinate } from "../utils/tile-utils";
 
 type Side = "white" | "black"
@@ -86,7 +87,7 @@ class MoveLog {
         
     };
 
-    #getNormalMovement(piece: PieceView, dest: Coordinate) {
+    #getNormalMovement(piece: Piece, dest: Coordinate) {
         
         const abbr = this.#getPieceAbbreviation(piece);
         const destKey = getTileKeyFromCoordinate(dest).toLowerCase();
@@ -95,7 +96,7 @@ class MoveLog {
         return assembled;
     }
 
-    #getPieceAbbreviation(piece: PieceView): string {
+    #getPieceAbbreviation(piece: Piece): string {
         const pieceType = getPieceTypeFromId(piece.id) as PieceType;
         let abbr = "";
 
@@ -127,7 +128,7 @@ class MoveLog {
         return abbr;
     }
 
-    #modifyForCaptureString(moveString: string, piece: PieceView): string {
+    #modifyForCaptureString(moveString: string, piece: Piece): string {
         /*
             Modify a basic "normal" move to turn it into a "capture" move.
             In all cases but the pawn, this involves placing an X between the
@@ -165,13 +166,13 @@ class MoveLog {
         return newString;
     };
 
-    #doCaptureSteps(moveString: string, piece: PieceView, dest: Coordinate): string {
+    #doCaptureSteps(moveString: string, piece: Piece, dest: Coordinate): string {
         moveString = this.#getNormalMovement(piece, dest);
         moveString = this.#modifyForCaptureString(moveString, piece);
         return moveString;
     }
 
-    recordMove(piece: PieceView, dest: Coordinate, manuever: Manuever = "none") {
+    recordMove(piece: Piece, dest: Coordinate, manuever: Manuever = "none") {
 
         // Switch logic based on manuever
         let moveString = ""

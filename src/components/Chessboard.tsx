@@ -10,10 +10,10 @@ import MoveLog from "./MoveLog";
 import Globals from "../config/globals";
 import { isChessPiece, isTileKey } from "../utils/validators";
 import { getPieceAtCoordinate, getTileKeyFromCoordinate, isPieceAtTile } from '../utils/tile-utils';
-import { capturePiece } from '../utils/piece-utils';
+import { capturePiece, getKing } from '../utils/piece-utils';
 
 import "./Chessboard.css";
-import { doCastling, doDoublePawnAdvancement, doEnPassant, RecordingData } from '../utils/move-logic';
+import { doCastling, doDoublePawnAdvancement, doEnPassant, isPieceCheckingEnemyKing, RecordingData } from '../utils/move-logic';
 
 interface TileGrid {
     [key: string]: ChessTileInterface;
@@ -254,7 +254,7 @@ function Chessboard() {
                             } else {
                                 highlights = [...piece.calculateMovement(pieces, true)];
                             }
-                            //const 
+                             
                             if (piece instanceof SpecialMovablePiece) {
                                 const specialMoves = (piece as SpecialMovablePiece).calculateSpecialMovement(pieces);
                                 
@@ -271,6 +271,27 @@ function Chessboard() {
                                     }
                                 };
                             }
+
+                            /*
+                                Now that we have possible moves, the next 
+                                step is check if our king is checked. If so,
+                                then possible movements are limited.
+                            */
+
+                            const ourKing = getKing(piece.color, pieces);
+                            if (ourKing.checked) { 
+                                const enemyMovement = ourKing.threatener!.calculateMovement(pieces, true);
+                                const newMovement = []
+                                for (const ourMove of highlights) {
+                                    for (const enemyMove of enemyMovement) {
+                                        if (ourMove.equals(enemyMove)) {
+                                            newMovement.push(ourMove);
+                                        };
+                                    };
+                                };
+
+                                highlights = newMovement;
+                            };
                             setHighlightedTiles(highlights);
                         }
                     };
@@ -370,6 +391,13 @@ function Chessboard() {
                                             otherPiece.justDoubleAdvanced = false;
                                         };
                                     };
+                                };
+
+                                // Post-movement checks
+                                if (isPieceCheckingEnemyKing(validPiece, pieces)) {
+                                    const enemyColor = validPiece.color === "white" ? "black" : "white";
+                                    const enemyKing = getKing(enemyColor, pieces);
+                                    enemyKing.enterCheck(validPiece);
                                 };
                             };   
                         };

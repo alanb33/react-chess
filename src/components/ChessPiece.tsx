@@ -7,6 +7,7 @@ export interface ChessPieceProps {
     imagePath: string,
     color: string,
     boardPosition: string,
+    checked?: boolean,
 };
 
 function ChessPiece(props: ChessPieceProps) {
@@ -23,6 +24,7 @@ function ChessPiece(props: ChessPieceProps) {
                 top: Globals.TILESIZE * props.y,
                 width: Globals.TILESIZE,
                 height: Globals.TILESIZE,
+                backgroundColor: props.checked ? "red" : "",
             }}>
             </img>
     );
