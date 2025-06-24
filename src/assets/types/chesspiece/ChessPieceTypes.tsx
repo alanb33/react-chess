@@ -103,7 +103,7 @@ export abstract class Piece {
     };
 
     abstract calculateMovement(allPieces: Piece[], stopAtEnemyPiece: boolean): Coordinate[];
-    abstract getKingThreateningMovement(allPieces: Piece[]): Coordinate[];
+    // abstract getKingThreateningMovement(allPieces: Piece[]): Coordinate[];
 
     equals(other: Piece) {
         return this.id === other.id;
@@ -170,7 +170,7 @@ export class Pawn extends SpecialMovablePiece {
             for (const piece of allPieces) {
                 if (piece.coordinate.x === dest.x && piece.coordinate.y === dest.y) {
                     pieceAhead = true;
-                    if (piece.color !=== this.color && piece.id.includes("king")) {
+                    if (piece.color !== this.color && piece.id.includes("king")) {
                         this.kingThreateningMovement.push(new Coordinate(dest.x, dest.y));
                     }
                 };
