@@ -1,7 +1,7 @@
 import { Coordinate } from "../utils/coordinate";
 import Globals from "../config/globals";
 import { King, Pawn, Piece, SpecialMovablePiece } from "../assets/types/chesspiece/ChessPieceTypes";
-import { getPieceAtCoordinate, getPieceViewAtCoordinate, isCoordinateValid, isPieceAtCoordinate } from "./tile-utils";
+import { getPieceAtCoordinate, isCoordinateValid, isPieceAtCoordinate } from "./tile-utils";
 import { Manuever } from "../components/MoveLog";
 
 export type Dir = "n" | "ne" | "e" | "se" | "s" | "sw" | "w" | "nw";
@@ -24,7 +24,7 @@ export function doCastling(validPiece: Piece, realTilePos: Coordinate, allPieces
 
     function getActualRook(rookPos: Coordinate): Piece | null {
         // Piece is guaranteed to be valid at this call.
-        const rookView = getPieceViewAtCoordinate(rookPos, allPieces);
+        const rookView = getPieceAtCoordinate(rookPos, allPieces);
         let rook: Piece | null = null;
 
         for (const piece of allPieces) {
@@ -132,6 +132,46 @@ export function doEnPassant(validPiece: Piece, realTilePos: Coordinate, allPiece
     };
 }
 
+export function getDirTowardsEnemyKing(origin: Piece, enemyKing: Piece): string {
+    if (enemyKing.coordinate.y === origin.coordinate.y) {
+        if (enemyKing.coordinate.x < origin.coordinate.x) {
+            return "w";
+        } else {
+            return "e";
+        };
+    };
+
+    if (enemyKing.coordinate.x === origin.coordinate.x) {
+        if (enemyKing.coordinate.y < origin.coordinate.y) {
+            return "n";
+        } else {
+            return "s";
+        };
+    };
+
+    const yDiff = enemyKing.coordinate.y - origin.coordinate.y;
+    const xDiff = enemyKing.coordinate.x - origin.coordinate.x;
+
+    // If these are equal, then the enemy king is perfect diagonal from us.
+    if (Math.abs(yDiff) / Math.abs(xDiff) === 1) {
+        if (yDiff < 0) {
+            if (xDiff < 0) {
+                return "nw";
+            } else {
+                return "ne";
+            }
+        } else {
+            if (xDiff < 0) {
+                return "sw";
+            } else {
+                return "se";
+            }
+        }
+    } else {
+        return "none"
+    }
+}
+
 export function getDirectionalTiles(origin: Piece, allPieces: Piece[], directions: Dir[], stopAtEnemyPiece: boolean = true): Coordinate[] {
 
     // Prepare the checking dictionary with all directions we need
@@ -172,7 +212,7 @@ export function getDirectionalTiles(origin: Piece, allPieces: Piece[], direction
                     // If the destination is valid...
                     if (isPieceAtCoordinate(dest, allPieces)) {
                         // And there is a piece at the destination....
-                        const piece = getPieceViewAtCoordinate(dest, allPieces)
+                        const piece = getPieceAtCoordinate(dest, allPieces)
                         
                         if (piece!.color !== origin.color) {
                             // Highlight it if it's an enemy piece.
@@ -200,4 +240,22 @@ export function getDirectionalTiles(origin: Piece, allPieces: Piece[], direction
     };
 
     return returnTiles;
+};
+
+export function isPieceCheckingEnemyKing(validPiece: Piece, allPieces: Piece[]): boolean {
+
+    const enemyKing = allPieces.filter(piece => 
+        piece.id.includes("king") && piece.color !== validPiece.color
+    )[0];
+
+    if (enemyKing) {
+        const ourMovement = validPiece.calculateMovement(allPieces, true);
+        for (const coordinate of ourMovement) {
+            if (coordinate.equals(enemyKing.coordinate)) {
+                return true;
+            }
+        }
+    }
+
+    return false;
 };

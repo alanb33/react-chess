@@ -1,8 +1,10 @@
+import React from 'react';
+
 import ChessPiece from "../../../components/ChessPiece";
 import { Coordinate } from "../../../utils/coordinate";
-import { Dir, getDirectionalTiles } from "../../../utils/move-logic";
+import { Dir, getDirectionalTiles, getDirTowardsEnemyKing } from "../../../utils/move-logic";
 import { getPieceViewAtCoordinate, getTileKeyFromCoordinate, isCoordinateValid, isPieceAtCoordinate } from "../../../utils/tile-utils";
-import { getPieceTypeFromId } from "../../../utils/piece-utils";
+import { getKing, getPieceTypeFromId } from "../../../utils/piece-utils";
 import Globals from "../../../config/globals";
 
 export type PieceType = "pawn" | "rook" | "knight" | "bishop" | "king" | "queen";
@@ -49,6 +51,8 @@ export abstract class Piece {
     readonly id: string;
     readonly imagePath: string;
 
+    kingThreateningMovement: Coordinate[] = [];
+
     get coordinate() {
         return new Coordinate(this._x, this._y);
     }
@@ -75,7 +79,7 @@ export abstract class Piece {
     };
 
     buildElement() {
-        return <ChessPiece
+        const pieceElement = <ChessPiece
             id={this.id}
             key={this.id}
             x={this.coordinate.x}
@@ -84,9 +88,22 @@ export abstract class Piece {
             imagePath={this.imagePath}
             boardPosition={getTileKeyFromCoordinate(this.coordinate)}
         />
+
+        if (this.id.includes("king")) {
+            // weird conversion to let us access King properties
+            const king = this as unknown as King;
+            const kingElement = React.cloneElement(
+                pieceElement,
+            { checked: king.checked });
+
+            return kingElement;
+        }
+
+        return pieceElement;
     };
 
     abstract calculateMovement(allPieces: Piece[], stopAtEnemyPiece: boolean): Coordinate[];
+    // abstract getKingThreateningMovement(allPieces: Piece[]): Coordinate[];
 
     equals(other: Piece) {
         return this.id === other.id;
@@ -132,8 +149,17 @@ export class Pawn extends SpecialMovablePiece {
         return this.calculateMovement(allPieces);
     }
 
+    getKingThreateningMovement(allPieces: Piece[]): Coordinate[] {
+        // In the Pawn's case, calculateMovement has the side effect of also
+        // setting this.kingThreateningMovement, so we can just calculate and
+        // then return that.
+        const movement = this.calculateMovement(allPieces);
+        return this.kingThreateningMovement;
+    }
+
     calculateMovement(allPieces: Piece[]): Coordinate[] {
         const tilesToHighlight = [];
+        this.kingThreateningMovement = [];
 
         // If we're white, move downwards, and if black, move upwards.
         const dir = this.color === "white" ? 1 : -1;
@@ -144,6 +170,9 @@ export class Pawn extends SpecialMovablePiece {
             for (const piece of allPieces) {
                 if (piece.coordinate.x === dest.x && piece.coordinate.y === dest.y) {
                     pieceAhead = true;
+                    if (piece.color !== this.color && piece.id.includes("king")) {
+                        this.kingThreateningMovement.push(new Coordinate(dest.x, dest.y));
+                    }
                 };
 
                 // Check for enemy pieces in the diagonals
@@ -375,6 +404,12 @@ export class King extends SpecialMovablePiece {
     kingCastlingDest: Coordinate | null;
     queenCastlingDest: Coordinate | null;
 
+    threatener: Piece | null = null;
+
+    get checked() {
+        return (this.threatener !== null);
+    }
+
     constructor (name: PieceType, color: string, coord: Coordinate) {
         super(name, color, coord);
         this.kingCastlingDest = null;
@@ -386,6 +421,7 @@ export class King extends SpecialMovablePiece {
         return getDirectionalTiles(this, allPieces, toCheck);
     }
 
+    
     calculateSpecialMovement(allPieces: Piece[]): Coordinate[] {
         const specialHighlights = [];
         const kingCastling = this.#calculateKingSideCastling(allPieces);
@@ -489,6 +525,11 @@ export class King extends SpecialMovablePiece {
         // No valid place for castling
         return null;
     };
+
+    enterCheck(fromPiece: Piece) {
+        this.threatener = fromPiece;
+        // other check logic to follow
+    }
 };
 
 class Queen extends Piece {
