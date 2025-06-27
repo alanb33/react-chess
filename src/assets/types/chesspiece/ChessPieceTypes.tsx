@@ -103,7 +103,7 @@ export abstract class Piece {
     };
 
     abstract calculateMovement(allPieces: Piece[], stopAtEnemyPiece: boolean): Coordinate[];
-    // abstract getKingThreateningMovement(allPieces: Piece[]): Coordinate[];
+    abstract getKingThreateningMovement(allPieces: Piece[]): Coordinate[];
 
     equals(other: Piece) {
         return this.id === other.id;
@@ -170,9 +170,6 @@ export class Pawn extends SpecialMovablePiece {
             for (const piece of allPieces) {
                 if (piece.coordinate.x === dest.x && piece.coordinate.y === dest.y) {
                     pieceAhead = true;
-                    if (piece.color !== this.color && piece.id.includes("king")) {
-                        this.kingThreateningMovement.push(new Coordinate(dest.x, dest.y));
-                    }
                 };
 
                 // Check for enemy pieces in the diagonals
@@ -182,6 +179,9 @@ export class Pawn extends SpecialMovablePiece {
                         if (piece.coordinate.x === dest.x + diagonal) {
                             const enemyCoord: Coordinate = new Coordinate(dest.x + diagonal, dest.y);
                             tilesToHighlight.push(enemyCoord);
+                            if (piece.color !== this.color && piece.id.includes("king")) {
+                                this.kingThreateningMovement.push(this.coordinate)
+                            }
                         };
                     };
                 };
@@ -264,6 +264,7 @@ export class Pawn extends SpecialMovablePiece {
     }
 };
 
+
 export class Rook extends Piece implements IFirstMovable {
     hasMoved: boolean = false;
     toCheck: Dir[] = ["n", "e", "w", "s"];
@@ -272,6 +273,45 @@ export class Rook extends Piece implements IFirstMovable {
     override moveTo(dest: Coordinate): void {
         super.moveTo(dest);
         this.hasMoved = true;
+    }
+
+    getKingThreateningMovement(allPieces: Piece[]): Coordinate[] {
+        // Find the enemy king
+        const enemyKing = getKing(this.color === "white" ? "black" : "white", allPieces)
+        
+        // No enemy king; should never happen
+        if (!enemyKing) return [];
+
+        // Get direction towards enemy king
+        const dirToKing = getDirTowardsEnemyKing(this, enemyKing);
+        if (dirToKing === "none") return [];
+
+        // Get all tiles in that direction and stop at enemy pieces
+        const threateningPath = getDirectionalTiles(this, allPieces, [dirToKing as Dir], true);
+        
+        // Include our own position as a valid target for capture
+        const result = [this.coordinate];
+        
+        // Add all empty spaces between us and the king (excluding the king itself)
+        let hasKing = false
+        for (const coord of threateningPath) {
+            if (!coord.equals(enemyKing.coordinate)) {
+                if (!isPieceAtCoordinate(coord, allPieces)) {
+                    result.push(coord);
+                }
+            } else {
+                // Stop when we reach the king
+                hasKing = true
+                break;
+            }
+        }
+
+        // If the king isn't actually in our path, we're not threatening them.
+        if (!hasKing) {
+            return []
+        }
+        
+        return result;
     }
 
     override calculateMovement(allPieces: Piece[], stopAtEnemyPiece: boolean = true): Coordinate[] {
@@ -391,9 +431,66 @@ class Knight extends Piece {
         return tiles;
 
     };
+
+    getKingThreateningMovement(allPieces: Piece[]): Coordinate[] {
+        // Find the enemy king
+        const enemyKing = allPieces.find(piece => 
+            piece.id.includes("king") && piece.color !== this.color
+        );
+        
+        if (!enemyKing) return [];
+
+        // Check if we can directly attack the king
+        const ourMovement = this.calculateMovement(allPieces);
+        const canAttackKing = ourMovement.some(coord => coord.equals(enemyKing.coordinate));
+        
+        // Knights can only threaten by direct attack, no line of attack
+        // So we only return our own position if we can attack the king
+        return canAttackKing ? [this.coordinate] : [];
+    }
+
 };
 
 class Bishop extends Piece {
+    getKingThreateningMovement(allPieces: Piece[]): Coordinate[] {
+        // Find the enemy king
+        const enemyKing = getKing(this.color === "white" ? "black" : "white", allPieces)
+        
+        // No enemy king; should never happen
+        if (!enemyKing) return [];
+
+        // Get direction towards enemy king
+        const dirToKing = getDirTowardsEnemyKing(this, enemyKing);
+        if (dirToKing === "none") return [];
+
+        // Get all tiles in that direction and stop at enemy pieces
+        const threateningPath = getDirectionalTiles(this, allPieces, [dirToKing as Dir], true);
+        
+        // Include our own position as a valid target for capture
+        const result = [this.coordinate];
+        
+        // Add all empty spaces between us and the king (excluding the king itself)
+        let hasKing = false
+        for (const coord of threateningPath) {
+            if (!coord.equals(enemyKing.coordinate)) {
+                if (!isPieceAtCoordinate(coord, allPieces)) {
+                    result.push(coord);
+                }
+            } else {
+                // Stop when we reach the king
+                hasKing = true
+                break;
+            }
+        }
+
+        // If the king isn't actually in our path, we're not threatening them.
+        if (!hasKing) {
+            return []
+        }
+        
+        return result;
+    }
+
     override calculateMovement(allPieces: Piece[]): Coordinate[] {
         const toCheck: Dir[] = ["nw", "sw", "se", "ne"];
         return getDirectionalTiles(this, allPieces, toCheck);
@@ -416,11 +513,16 @@ export class King extends SpecialMovablePiece {
         this.queenCastlingDest = null;
     }
 
+    getKingThreateningMovement(allPieces: Piece[]): Coordinate[] {
+        // As a King can never directly threaten another King in chess, we do
+        // not to evaluate any conditions.
+        return []
+    }
+
     override calculateMovement(allPieces: Piece[]): Coordinate[] {
         const toCheck: Dir[] = ["n", "e", "s", "w", "nw", "sw", "se", "ne"];
         return getDirectionalTiles(this, allPieces, toCheck);
     }
-
     
     calculateSpecialMovement(allPieces: Piece[]): Coordinate[] {
         const specialHighlights = [];
@@ -533,6 +635,45 @@ export class King extends SpecialMovablePiece {
 };
 
 class Queen extends Piece {
+    getKingThreateningMovement(allPieces: Piece[]): Coordinate[] {
+        // Find the enemy king
+        const enemyKing = getKing(this.color === "white" ? "black" : "white", allPieces)
+        
+        // No enemy king; should never happen
+        if (!enemyKing) return [];
+
+        // Get direction towards enemy king
+        const dirToKing = getDirTowardsEnemyKing(this, enemyKing);
+        if (dirToKing === "none") return [];
+
+        // Get all tiles in that direction and stop at enemy pieces
+        const threateningPath = getDirectionalTiles(this, allPieces, [dirToKing as Dir], true);
+        
+        // Include our own position as a valid target for capture
+        const result = [this.coordinate];
+        
+        // Add all empty spaces between us and the king (excluding the king itself)
+        let hasKing = false
+        for (const coord of threateningPath) {
+            if (!coord.equals(enemyKing.coordinate)) {
+                if (!isPieceAtCoordinate(coord, allPieces)) {
+                    result.push(coord);
+                }
+            } else {
+                // Stop when we reach the king
+                hasKing = true
+                break;
+            }
+        }
+
+        // If the king isn't actually in our path, we're not threatening them.
+        if (!hasKing) {
+            return []
+        }
+
+        return result;
+    }
+
     override calculateMovement(allPieces: Piece[]): Coordinate[] {
         const toCheck: Dir[] = ["n", "e", "s", "w", "nw", "sw", "se", "ne"];
         return getDirectionalTiles(this, allPieces, toCheck);
