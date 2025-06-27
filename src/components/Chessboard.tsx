@@ -234,230 +234,186 @@ function Chessboard() {
         .filter(piece => piece.id !== draggingPiece) // Don't render the piece being dragged
         .map(piece => piece.buildElement());
      
-    // TODO: Probably using too many things here. Read up on hooks and see what can be better-placed.
+    // Separate handlers for drag operations
+    const handlePieceDragStart = useCallback((pieceID: string) => {
+        setDraggingPiece(pieceID);
+        const piece = getPieceById(pieceID);
+        if (piece) {
+            let highlights = []
+            if (piece instanceof Rook) {
+                highlights = piece.calculateMovement(pieces, false);
+            } else {
+                highlights = [...piece.calculateMovement(pieces, true)];
+            }
+             
+            if (piece instanceof SpecialMovablePiece) {
+                const specialMoves = (piece as SpecialMovablePiece).calculateSpecialMovement(pieces);
+                
+                for (const move of specialMoves) {
+                    let found = false;
+                    for (const highlight of highlights) {
+                        if (move.x === highlight.x && move.y === highlight.y) {
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found) {
+                        highlights.push(move);
+                    }
+                };
+            }
+
+            // Check if our king is in check and limit moves accordingly
+            const ourKing = getKing(piece.color, pieces);
+            if (ourKing.checked) { 
+                const enemyMovement = ourKing.threatener!.calculateMovement(pieces, true);
+                const newMovement = []
+                for (const ourMove of highlights) {
+                    for (const enemyMove of enemyMovement) {
+                        if (ourMove.equals(enemyMove)) {
+                            newMovement.push(ourMove);
+                        };
+                    };
+                };
+                highlights = newMovement;
+            };
+            setHighlightedTiles(highlights);
+        }
+    }, [getPieceById, pieces]);
+
+    const handlePieceDrop = useCallback((dropPosition: Coordinate) => {
+        if (!draggingPiece) return;
+
+        const validPiece = getPieceById(draggingPiece);
+        if (!validPiece) return;
+
+        let recordingData: RecordingData = {
+            validPiece: null,
+            realTilePos: null,
+            mode: "none",
+        };
+
+        let capturingPiece: Piece | null = null;
+        const realTilePos = new Coordinate(
+            Math.floor(dropPosition.x / Globals.TILESIZE),
+            Math.floor(dropPosition.y / Globals.TILESIZE)
+        );
+
+        // Check if drop position is within board bounds
+        if (realTilePos.x > 0 && realTilePos.x <= Globals.BOARDSIZE &&
+            realTilePos.y > 0 && realTilePos.y <= Globals.BOARDSIZE) {
+            
+            // Check if the move is valid (tile is highlighted)
+            const isValidMove = highlightedTiles.some(tile => 
+                realTilePos.x === tile.x && realTilePos.y === tile.y
+            );
+
+            if (isValidMove) {
+                const destPiece = getPieceAtCoordinate(realTilePos, pieces);
+                if (destPiece && validPiece.id !== destPiece.id) {
+                    capturingPiece = destPiece;
+                    recordingData = {
+                        validPiece: validPiece,
+                        realTilePos: realTilePos, 
+                        mode: "capture"
+                    };
+                } else {
+                    // Don't log special non-captures as a regular move
+                    if (!(validPiece instanceof Pawn && validPiece.enPassantDest)) {
+                        recordingData = {
+                            validPiece: validPiece,
+                            realTilePos: realTilePos, 
+                            mode: "none"
+                        };
+                    }
+                }
+
+                // Execute special moves
+                doDoublePawnAdvancement(validPiece, realTilePos);
+                
+                const enPassantData = doEnPassant(validPiece, realTilePos, pieces);
+                if (enPassantData) {
+                    capturingPiece = enPassantData.capturingPiece!;
+                    recordingData = enPassantData.recordingData!;
+                }
+
+                const castlingData = doCastling(validPiece, realTilePos, pieces);
+                if (castlingData) {
+                    recordingData = castlingData!;
+                }
+
+                // Record and execute the move
+                moveLog.recordMove(
+                    recordingData.validPiece!,
+                    recordingData.realTilePos as Coordinate,
+                    recordingData.mode
+                );
+                validPiece.moveTo(realTilePos);
+
+                if (capturingPiece) {
+                    setPieces(capturePiece(capturingPiece, pieces));
+                }
+
+                // Clear any 'just double advanced' status for other pawns, to 
+                // prevent accidental cases of en passant
+                setPieces(currentPieces => 
+                    currentPieces.map(piece => {
+                        if (piece instanceof Pawn && piece.id !== validPiece.id) {
+                            piece.justDoubleAdvanced = false;
+                        }
+                        return piece;
+                    })
+                );
+
+                // Check for enemy king in check
+                if (isPieceCheckingEnemyKing(validPiece, pieces)) {
+                    const enemyColor = validPiece.color === "white" ? "black" : "white";
+                    const enemyKing = getKing(enemyColor, pieces);
+                    enemyKing.enterCheck(validPiece);
+                }
+            }
+        }
+
+        // Always clear drag state after attempting a move
+        setDraggingPiece(null);
+        setHighlightedTiles([]);
+    }, [draggingPiece, highlightedTiles, pieces, getPieceById]);
+
+    const handleMouseMove = useCallback((event: MouseEvent) => {
+        setMousePosition({ x: event.pageX, y: event.pageY });
+    }, []);
+
+    // Simplified useEffect that only handles DOM event listeners
     useEffect(() => {
         function handleDragStart(event: DragEvent) {
             event.preventDefault();
             const target = event.target;
 
-            if (target) {
-                if (isChessPiece(target)) {
-                    const elem = target as HTMLImageElement;
-                    const pieceID = elem.getAttribute("id");
-                    if (pieceID) {
-                        setDraggingPiece(pieceID);
-                        const piece = getPieceById(pieceID)
-                        if (piece) {
-                            let highlights = []
-                            if (piece instanceof Rook) {
-                                highlights = piece.calculateMovement(pieces, false);
-                            } else {
-                                highlights = [...piece.calculateMovement(pieces, true)];
-                            }
-                             
-                            if (piece instanceof SpecialMovablePiece) {
-                                const specialMoves = (piece as SpecialMovablePiece).calculateSpecialMovement(pieces);
-                                
-                                for (const move of specialMoves) {
-                                    let found = false;
-                                    for (const highlight of highlights) {
-                                        if (move.x === highlight.x && move.y === highlight.y) {
-                                            found = true;
-                                            break;
-                                        }
-                                    }
-                                    if (!found) {
-                                        highlights.push(move);
-                                    }
-                                };
-                            }
-
-                            /*
-                                Now that we have possible moves, the next 
-                                step is check if our king is checked. If so,
-                                then possible movements are limited.
-                            */
-
-                            const ourKing = getKing(piece.color, pieces);
-                            if (ourKing.checked) { 
-                                const enemyMovement = ourKing.threatener!.calculateMovement(pieces, true);
-                                const newMovement = []
-                                for (const ourMove of highlights) {
-                                    for (const enemyMove of enemyMovement) {
-                                        if (ourMove.equals(enemyMove)) {
-                                            newMovement.push(ourMove);
-                                        };
-                                    };
-                                };
-
-                                highlights = newMovement;
-                            };
-                            setHighlightedTiles(highlights);
-                        }
-                    };
-                };
-            };
-        };
-
-        // While this sounds like it should be a DragEvent/dragend event, it's actually going to be mouseup here since
-        // the page is being re-rendered and the drag state is lost
-        function handleDragEnd(event: MouseEvent) {
-            if (draggingPiece) {
-                const validPiece = getPieceById(draggingPiece);
-
-                let recordingData: RecordingData = {
-                    validPiece: null,
-                    realTilePos: null,
-                    mode: "none",
-                };
-                
-                if (validPiece) {
-                    let capturingPiece: Piece | null = null;
-
-                    setDraggingPiece(null)
-                    setHighlightedTiles([])
-                    const dropPos: Coordinate 
-                        = new Coordinate (event.pageX, event.pageY);
-                    const realTilePos: Coordinate 
-                        = new Coordinate (
-                            Math.floor(dropPos.x / Globals.TILESIZE),
-                            Math.floor(dropPos.y / Globals.TILESIZE)
-                        ); 
-
-                    if (realTilePos.x > 0 && realTilePos.x <= Globals.BOARDSIZE) {
-                        if (realTilePos.y > 0 && realTilePos.y <= Globals.BOARDSIZE) {
-                            let destTileValid = null;
-                            for (const tile of highlightedTiles) {
-                                if (realTilePos.x === tile.x && realTilePos.y === tile.y) {
-                                    const destPiece = getPieceAtCoordinate(realTilePos, pieces);
-                                    if (destPiece && validPiece.id !== destPiece.id) {
-                                        capturingPiece = destPiece;
-                                        recordingData = {
-                                            validPiece: validPiece,
-                                            realTilePos: realTilePos, 
-                                            mode: "capture"
-                                        };
-                                    } else {
-                                        // Don't log special non-captures as a regular move
-                                        if (!(validPiece instanceof Pawn && validPiece.enPassantDest)) {
-                                            recordingData = {
-                                                validPiece: validPiece,
-                                                realTilePos: realTilePos, 
-                                                mode: "none"
-                                            };
-                                        }
-                                    }
-                                    destTileValid = true;
-                                    break;
-                                };
-                            };
-
-                            // We have a good destination and a valid piece
-                            if (destTileValid && validPiece) {
-
-                                // Pawn double advancement logic
-                                doDoublePawnAdvancement(validPiece, realTilePos);
-                                
-                                // En passant logic
-                                const enPassantData = doEnPassant(validPiece, realTilePos, pieces);
-                                if (enPassantData) {
-                                    capturingPiece = enPassantData.capturingPiece!;
-                                    recordingData = enPassantData.recordingData!;
-                                }
-;
-                                // Castling logic
-                                const castlingData = doCastling(validPiece, realTilePos, pieces);
-                                if (castlingData) {
-                                    recordingData = castlingData!;
-                                }
-
-                                moveLog.recordMove(
-                                    recordingData.validPiece!,
-                                    recordingData.realTilePos as Coordinate,
-                                    recordingData.mode
-                                )
-                                validPiece.moveTo(realTilePos);
-
-                                if (capturingPiece) {
-                                    setPieces(capturePiece(capturingPiece, pieces));
-                                }
-
-                                // Clear any 'just double advanced' status for
-                                // other pawns, to prevent accidental cases of
-                                // en passant
-                                for (const otherPiece of pieces) {
-                                    if (otherPiece instanceof Pawn) {
-                                        if (otherPiece.id !== validPiece.id) {
-                                            otherPiece.justDoubleAdvanced = false;
-                                        };
-                                    };
-                                };
-
-                                // Post-movement checks
-                                if (isPieceCheckingEnemyKing(validPiece, pieces)) {
-                                    const enemyColor = validPiece.color === "white" ? "black" : "white";
-                                    const enemyKing = getKing(enemyColor, pieces);
-                                    enemyKing.enterCheck(validPiece);
-                                };
-                            };   
-                        };
-                    };
-                };
-            };
-        };
-
-        /* TODO: Do something else to specify a highlight, like making the piece larger
-        function handleHover(event: MouseEvent) {
-            if (event.target) {
-                const target = event.target as HTMLElement
-                // It it's a chess piece, change the target to its parent tile.
-                if (isChessPiece(target)) {
-                    const associatedTileKey = target.getAttribute("board-position");
-                    if (associatedTileKey) {
-                        if (isTileKey(associatedTileKey)) {
-                            setHighlightedTile(associatedTileKey)
-                        };
-                    };
-                } else if (isChessboardTile(target)) {
-                    // Else, it's just a tile, so highlight it. 
-                    if (isTileKey(target.id)) {
-                        setHighlightedTile(target.id);
-                    }
+            if (target && isChessPiece(target)) {
+                const elem = target as HTMLImageElement;
+                const pieceID = elem.getAttribute("id");
+                if (pieceID) {
+                    handlePieceDragStart(pieceID);
                 }
             }
         }
-        */
 
-        function updateMousePosition(event: MouseEvent) {
-            const newMousePos = {
-                x: event.pageX,
-                y: event.pageY,
+        function handleMouseUp(event: MouseEvent) {
+            if (draggingPiece) {
+                handlePieceDrop(new Coordinate(event.pageX, event.pageY));
             }
-            setMousePosition(newMousePos);
         }
 
-        //document.addEventListener("keydown", handleKeyDown);
-        //document.addEventListener("keyup", handleKeyUp);
-        //document.addEventListener("mousedown", handleClick);
-        //document.addEventListener("mouseover", handleHover);
-
-        // Handling of piece clicking and dragging
         document.addEventListener("dragstart", handleDragStart);
-        document.addEventListener("mouseup", handleDragEnd);
-        document.addEventListener("mousemove", updateMousePosition);
+        document.addEventListener("mouseup", handleMouseUp);
+        document.addEventListener("mousemove", handleMouseMove);
 
-        // Cleanup function, so it doesn't add the event listeners repeatedly
         return () => {
-            //document.removeEventListener("keydown", handleKeyDown);
-            //document.removeEventListener("keyup", handleKeyUp);
-            //document.removeEventListener("mousedown", handleClick);
-            //document.removeEventListener("mouseover", handleHover);
             document.removeEventListener("dragstart", handleDragStart);
-            document.removeEventListener("mouseup", handleDragEnd);
-            document.removeEventListener("mousemove", updateMousePosition);
+            document.removeEventListener("mouseup", handleMouseUp);
+            document.removeEventListener("mousemove", handleMouseMove);
         };
-
-    }, [draggingPiece, highlightedTiles, mousePosition, pieces, getPieceById]);
+    }, [draggingPiece, handlePieceDragStart, handlePieceDrop, handleMouseMove]);
 
     const SIZECALC = `${Globals.TILESIZE * Globals.BOARDSIZE}px`;
     const moveLogElement = moveLog.buildElement();
