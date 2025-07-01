@@ -383,7 +383,6 @@ function Chessboard() {
         setMousePosition({ x: event.pageX, y: event.pageY });
     }, []);
 
-    // Simplified useEffect that only handles DOM event listeners
     useEffect(() => {
         function handleDragStart(event: DragEvent) {
             event.preventDefault();
