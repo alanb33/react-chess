@@ -3,6 +3,7 @@ import Globals from "../config/globals";
 import { King, Pawn, Piece, SpecialMovablePiece } from "../assets/types/chesspiece/ChessPieceTypes";
 import { getPieceAtCoordinate, isCoordinateValid, isPieceAtCoordinate } from "./tile-utils";
 import { Manuever } from "../components/MoveLog";
+import { getKing } from "./piece-utils";
 
 export type Dir = "n" | "ne" | "e" | "se" | "s" | "sw" | "w" | "nw";
 
@@ -242,6 +243,54 @@ export function getDirectionalTiles(origin: Piece, allPieces: Piece[], direction
     return returnTiles;
 };
 
+export function isLineThreatened(king: King): boolean {
+    if (king.threatener) {
+        const line_threats = ["rook", "bishop", "queen"]
+        for (const threat in line_threats) {
+            if (king.threatener.id.includes(threat)) {
+                const move_dir = getDirTowardsEnemyKing(king.threatener, king);
+                return move_dir !== "none";
+            }
+        }
+    }
+    return false;
+}
+
+// This is used for checking/checkmating logic. Assumes valid direction.
+export function getLineThreatUnsafeSpace(king: King, unsafe_space_dir: string): Coordinate {
+    const dest: Coordinate = new Coordinate(king.coordinate.x, king.coordinate.y);
+    switch (unsafe_space_dir) {
+        case "w":
+            dest.x--;
+            break;
+        case "nw":
+            dest.x--;
+            dest.y--;
+            break;
+        case "n":
+            dest.y--;
+            break;
+        case "ne":
+            dest.x++;
+            dest.y--;
+            break;
+        case "e":
+            dest.x++;
+            break;
+        case "se":
+            dest.x++;
+            dest.y++;
+            break;
+        case "s":
+            dest.y++;
+            break;
+        case "sw":
+            dest.y++;
+            dest.x--;
+            break;
+    }
+    return dest;
+}
 export function isPieceCheckingEnemyKing(validPiece: Piece, allPieces: Piece[]): boolean {
 
     const enemyKing = allPieces.filter(piece => 
@@ -259,3 +308,97 @@ export function isPieceCheckingEnemyKing(validPiece: Piece, allPieces: Piece[]):
 
     return false;
 };
+
+export function isSquareUnderAttack(square: Coordinate, kingColor: string, allPieces: Piece[]): boolean {
+    const enemyColor = kingColor === "white" ? "black" : "white";    
+    for (const piece of allPieces) {
+        if (piece.color === enemyColor) {
+            const movement = piece.calculateMovement(allPieces, true);
+            for (const attackSquare of movement) {
+                if (attackSquare.equals(square)) {
+                    return true;
+                }
+            }
+        }
+    }    
+    return false;
+}
+
+export function canPieceInterfereWithCheck(piece: Piece, checkedKing: King, allPieces: Piece[]): boolean {
+    if (!checkedKing.checked || !checkedKing.threatener) {
+        return true; // No check, piece can move freely
+    }
+    
+    // The king itself can always try to move (we'll filter its moves separately)
+    if (piece instanceof King) {
+        return true;
+    }
+    
+    const threatener = checkedKing.threatener;
+    const threateningPath = threatener.getKingThreateningMovement(allPieces);
+    const pieceMovement = piece.calculateMovement(allPieces, true);
+    
+    // Check if piece can capture the threatener
+    if (pieceMovement.some(move => move.equals(threatener.coordinate))) {
+        return true;
+    }
+    
+    // Check if piece can block the threatening path
+    for (const move of pieceMovement) {
+        for (const threatSquare of threateningPath) {
+            if (move.equals(threatSquare) && !move.equals(checkedKing.coordinate)) {
+                return true;
+            }
+        }
+    }
+    
+    return false;
+}
+
+export function checkForCheckmate(allPieces: Piece[]): void {
+    // Check if either king is in checkmate
+    const kings: King[] = [
+        getKing("white", allPieces),
+        getKing("black", allPieces)
+    ]
+    kings.forEach(king => {
+        if (king.checked) {
+            const kingColor = king.color;
+            let canEscape = false;
+            
+            // Check if king can move to safety
+            const kingMoves = king.calculateMovement(allPieces);
+            if (kingMoves.length > 0) {
+                canEscape = true;
+            }
+            
+            // Check if any piece can help
+            if (!canEscape) {
+                for (const piece of allPieces) {
+                    if (piece.color === kingColor && !(piece instanceof King)) {
+                        if (canPieceInterfereWithCheck(piece, king, allPieces)) {
+                            // Check if this piece actually has valid moves
+                            const threateningPath = king.threatener!.getKingThreateningMovement(allPieces);
+                            const pieceMovement = piece.calculateMovement(allPieces, true);
+                            
+                            for (const move of pieceMovement) {
+                                // Can capture threatener or block path
+                                if (move.equals(king.threatener!.coordinate) || 
+                                    threateningPath.some(threat => move.equals(threat) && !move.equals(king.coordinate))) {
+                                    canEscape = true;
+                                    break;
+                                }
+                            }
+                            
+                            if (canEscape) break;
+                        }
+                    }
+                }
+            }
+            
+            if (!canEscape) {
+                console.log("CHECKMATE");
+            }
+        }
+    });
+}

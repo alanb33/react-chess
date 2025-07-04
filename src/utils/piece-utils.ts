@@ -9,6 +9,8 @@ export function getPieceTypeFromId(pieceID: string): string {
 }
 
 export function capturePiece(piece: Piece, allPieces: Piece[]): Piece[] {
+    // For immediate capture update logic
+    piece.captured = true;
     return allPieces.filter(existingPiece => existingPiece.id !== piece.id);
 }
 

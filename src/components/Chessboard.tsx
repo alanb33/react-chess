@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 
-import { Pawn, Piece, PieceBuilder, PieceType, Rook, SpecialMovablePiece } from '../assets/types/chesspiece/ChessPieceTypes';
+import { King, Pawn, Piece, PieceBuilder, PieceType, Rook, SpecialMovablePiece } from '../assets/types/chesspiece/ChessPieceTypes';
 import ChessTile, { ChessTileInterface } from "./ChessTile"
 import { MousePos, TileColor } from "./CommonTypes";
 import { Coordinate } from '../utils/coordinate';
@@ -13,7 +13,7 @@ import { getPieceAtCoordinate, getTileKeyFromCoordinate, isPieceAtTile } from '.
 import { capturePiece, getKing } from '../utils/piece-utils';
 
 import "./Chessboard.css";
-import { doCastling, doDoublePawnAdvancement, doEnPassant, isPieceCheckingEnemyKing, RecordingData } from '../utils/move-logic';
+import { canPieceInterfereWithCheck, checkForCheckmate, doCastling, doDoublePawnAdvancement, doEnPassant, getDirTowardsEnemyKing, getLineThreatUnsafeSpace, isLineThreatened, isPieceCheckingEnemyKing, RecordingData } from '../utils/move-logic';
 
 interface TileGrid {
     [key: string]: ChessTileInterface;
@@ -234,11 +234,21 @@ function Chessboard() {
         .filter(piece => piece.id !== draggingPiece) // Don't render the piece being dragged
         .map(piece => piece.buildElement());
      
-    // Separate handlers for drag operations
     const handlePieceDragStart = useCallback((pieceID: string) => {
         setDraggingPiece(pieceID);
         const piece = getPieceById(pieceID);
         if (piece) {
+            // Check if our king is in check and if so, restrict piece selection
+            const ourKing = getKing(piece.color, pieces);
+            if (ourKing.checked) {
+                // Only allow pieces that can interfere with the threat or capture the threatening piece
+                const canPieceHelp = canPieceInterfereWithCheck(piece, ourKing, pieces);
+                if (!canPieceHelp) {
+                    // This piece can't help with the check, don't allow selection
+                    return;
+                }
+            }
+
             let highlights = []
             if (piece instanceof Rook) {
                 highlights = piece.calculateMovement(pieces, false);
@@ -264,19 +274,106 @@ function Chessboard() {
             }
 
             // Check if our king is in check and limit moves accordingly
-            const ourKing = getKing(piece.color, pieces);
-            if (ourKing.checked) { 
-                const enemyMovement = ourKing.threatener!.calculateMovement(pieces, true);
+            if (ourKing.checked && piece !== ourKing) {
+                const threateningMovement = ourKing.threatener!.getKingThreateningMovement(pieces);
                 const newMovement = []
                 for (const ourMove of highlights) {
-                    for (const enemyMove of enemyMovement) {
-                        if (ourMove.equals(enemyMove)) {
-                            newMovement.push(ourMove);
+                    for (const threateningMove of threateningMovement) {
+                        if (ourMove.equals(threateningMove)) {
+                            newMovement.push(ourMove)
                         };
                     };
                 };
                 highlights = newMovement;
             };
+
+            // If we are the king, limit moves
+            if (ourKing.checked && piece === ourKing) {
+                const threateningMovement = ourKing.threatener!.getKingThreateningMovement(pieces);
+                const newMovement = []
+                for (const ourMove of highlights) {
+                    let isThreatened = false;
+                    for (const threateningMove of threateningMovement) {
+                        if (ourMove.equals(threateningMove)) {
+                            isThreatened = true;
+                        };
+                    };
+
+                    if (isLineThreatened(ourKing)) {
+                        const dir_to_king = getDirTowardsEnemyKing(ourKing.threatener!, ourKing);
+                        const unsafeDest = getLineThreatUnsafeSpace(ourKing, dir_to_king);
+                        if (ourMove.equals(unsafeDest)) {
+                            isThreatened = true;
+                        }
+                    }
+
+                    if (!isThreatened) {
+                        newMovement.push(ourMove)
+                    }
+
+                };
+                highlights = newMovement;
+            };
+
+            // If we are the king, don't permit moves that will put us into check.
+            if (piece === ourKing) {
+                const enemyColor = ourKing.color === "white" ? "black" : "white";
+                const enemyPieces = pieces.filter(piece => {
+                    return piece.color === enemyColor
+                });
+                for (const enemy of enemyPieces) {
+                    if (enemy instanceof Pawn) {
+                        // Pawns target their diagonals
+                        const leftDestX = enemy.coordinate.x - 1
+                        const rightDestX = enemy.coordinate.x + 1
+                        const forward = enemy.color === "white" ? 1 : -1;
+                        const forwardDestY = enemy.coordinate.y + forward;
+                        const leftDest = new Coordinate(leftDestX, forwardDestY);
+                        const rightDest = new Coordinate(rightDestX, forwardDestY);
+
+                        const threatened: Coordinate[] = []
+                        for (const dest of [leftDest, rightDest]) {;
+                            for (const coord of highlights) {
+                                if (coord.equals(dest)) {
+                                    threatened.push(dest)
+                                    break;
+                                }
+                            }
+                        }
+
+                        // Filter out any tiles that are dangeorus
+                        highlights = highlights.filter(highlight => {
+                            for (const threat of threatened) {
+                                if (highlight.equals(threat)) {
+                                    return false;
+                                }
+                            }
+                            return true
+                        });
+                    } else {
+                        // Threat range matches the piece movement
+                        const threats = enemy.calculateMovement(pieces, true);
+                        const badSquares: Coordinate[] = []
+                        for (const threat of threats) {
+                            for (const highlight of highlights) {
+                                if (highlight.equals(threat)) {
+                                    badSquares.push(threat);
+                                }
+                            }
+                        }
+
+                        // Filter out any tiles that are dangeorus
+                        highlights = highlights.filter(highlight => {
+                            for (const badSquare of badSquares) {
+                                if (highlight.equals(badSquare)) {
+                                    return false;
+                                }
+                            }
+                            return true
+                        });
+                    }
+                } 
+            }
             setHighlightedTiles(highlights);
         }
     }, [getPieceById, pieces]);
@@ -371,7 +468,36 @@ function Chessboard() {
                     const enemyKing = getKing(enemyColor, pieces);
                     enemyKing.enterCheck(validPiece);
                 }
+
+                // Check for checkmate
+                checkForCheckmate(pieces);
             }
+
+            // Clear any check status if necessary
+            const kings: King[] = [
+                getKing("white", pieces),
+                getKing("black", pieces)
+            ]
+            for (const king of kings) {
+                if (king.checked) {
+                    const kingEnemyColor = king.color === "white" ? "black" : "white";
+                    const enemyPieces = pieces.filter(piece => {
+                        return piece.color === kingEnemyColor && !piece.captured;
+                    });
+                    let inCheck = false;
+                    for (const enemyPiece of enemyPieces) {
+                        if (isPieceCheckingEnemyKing(enemyPiece, pieces)) {
+                            inCheck = true;
+                            break;
+                        }
+                    }
+                    if (!inCheck) {
+                        king.clearCheck()
+                    }
+                }
+            }
+
+
         }
 
         // Always clear drag state after attempting a move

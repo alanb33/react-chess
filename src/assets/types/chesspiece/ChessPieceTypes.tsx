@@ -2,7 +2,7 @@ import React from 'react';
 
 import ChessPiece from "../../../components/ChessPiece";
 import { Coordinate } from "../../../utils/coordinate";
-import { Dir, getDirectionalTiles, getDirTowardsEnemyKing } from "../../../utils/move-logic";
+import { Dir, getDirectionalTiles, getDirTowardsEnemyKing, isSquareUnderAttack } from "../../../utils/move-logic";
 import { getPieceViewAtCoordinate, getTileKeyFromCoordinate, isCoordinateValid, isPieceAtCoordinate } from "../../../utils/tile-utils";
 import { getKing, getPieceTypeFromId } from "../../../utils/piece-utils";
 import Globals from "../../../config/globals";
@@ -44,6 +44,7 @@ export interface IFirstMovable {
 }
 
 export abstract class Piece {
+    captured: boolean;
     readonly name: PieceType;
     readonly color: string;
     _x: number;
@@ -66,7 +67,8 @@ export abstract class Piece {
         this.name = name;
         this.color = color;
         this.id = generatePieceID(this.name, this.color);
-        this.imagePath = `src/assets/images/${this.name}-${this.color[0]}.png`
+        this.imagePath = `src/assets/images/${this.name}-${this.color[0]}.png`;
+        this.captured = false;
 
         if ((coord.x > 0 && coord.x <= Globals.BOARDSIZE) && (coord.x > 0 && coord.y <= Globals.BOARDSIZE)) {
             this._x = coord.x;
@@ -521,10 +523,28 @@ export class King extends SpecialMovablePiece {
 
     override calculateMovement(allPieces: Piece[]): Coordinate[] {
         const toCheck: Dir[] = ["n", "e", "s", "w", "nw", "sw", "se", "ne"];
-        return getDirectionalTiles(this, allPieces, toCheck);
+        const basicMovement = getDirectionalTiles(this, allPieces, toCheck);
+        
+        // If we're in check, filter out squares that are still under attack
+        if (this.checked) {
+            const safeSquares = [];
+            for (const square of basicMovement) {
+                if (!isSquareUnderAttack(square, this.color, allPieces)) {
+                    safeSquares.push(square);
+                }
+            }
+            return safeSquares;
+        }
+        
+        return basicMovement;
     }
     
     calculateSpecialMovement(allPieces: Piece[]): Coordinate[] {
+        // Can't castle while in check
+        if (this.checked) {
+            return [];
+        }
+        
         const specialHighlights = [];
         const kingCastling = this.#calculateKingSideCastling(allPieces);
         const queenCastling = this.#calculateQueenSideCastling(allPieces);
@@ -631,6 +651,10 @@ export class King extends SpecialMovablePiece {
     enterCheck(fromPiece: Piece) {
         this.threatener = fromPiece;
         // other check logic to follow
+    }
+
+    clearCheck() {
+        this.threatener = null;
     }
 };
 
